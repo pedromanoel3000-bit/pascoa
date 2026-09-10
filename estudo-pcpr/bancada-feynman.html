@@ -1,0 +1,1270 @@
+<title>Bancada Feynman PCPR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+:root{
+  --bg:#E9E7E1;
+  --surface:#FBFAF7;
+  --surface-2:#F2F0EA;
+  --raised:#FFFFFF;
+  --ink:#1B1F26;
+  --ink-2:#5B626C;
+  --ink-3:#8B9199;
+  --line:#D9D5CB;
+  --line-2:#C5C0B2;
+  --accent:#7A1F2B;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#F4E3E5;
+  --accent-line:#E0C3C7;
+  --gold:#8E6C2C;
+  --st-block:#5C6572;
+  --st-mid:#A96E17;
+  --st-good:#2C7A5B;
+  --shadow:0 1px 2px rgba(27,31,38,.05), 0 10px 26px -14px rgba(27,31,38,.28);
+  --focus:#7A1F2B;
+  --f-display:"Spectral", Georgia, "Times New Roman", serif;
+  --f-ui:"Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101319;
+    --surface:#171B22;
+    --surface-2:#1D222A;
+    --raised:#212730;
+    --ink:#E9E7E2;
+    --ink-2:#A3AAB4;
+    --ink-3:#767E89;
+    --line:#2B313B;
+    --line-2:#3B434F;
+    --accent:#C9636F;
+    --accent-ink:#170A0D;
+    --accent-soft:#331A1F;
+    --accent-line:#4B2932;
+    --gold:#C9A45C;
+    --st-block:#8A94A3;
+    --st-mid:#D6A03F;
+    --st-good:#4FB08A;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -16px rgba(0,0,0,.8);
+    --focus:#C9636F;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101319;
+  --surface:#171B22;
+  --surface-2:#1D222A;
+  --raised:#212730;
+  --ink:#E9E7E2;
+  --ink-2:#A3AAB4;
+  --ink-3:#767E89;
+  --line:#2B313B;
+  --line-2:#3B434F;
+  --accent:#C9636F;
+  --accent-ink:#170A0D;
+  --accent-soft:#331A1F;
+  --accent-line:#4B2932;
+  --gold:#C9A45C;
+  --st-block:#8A94A3;
+  --st-mid:#D6A03F;
+  --st-good:#4FB08A;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -16px rgba(0,0,0,.8);
+  --focus:#C9636F;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--f-ui);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:1060px;
+  margin:0 auto;
+  padding-inline:20px;
+  padding-block:26px 64px;
+}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+button{font:inherit;color:inherit;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+
+/* ---------- shared bits ---------- */
+.eyebrow{
+  font-family:var(--f-mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+}
+.rule-gold{
+  height:2px;
+  background:linear-gradient(90deg,var(--gold),transparent 62%);
+  border:0;
+  margin:0;
+}
+
+/* ---------- header ---------- */
+.masthead{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.masthead h1{
+  font-family:var(--f-display);
+  font-weight:700;
+  font-size:clamp(30px,6vw,44px);
+  line-height:1.04;
+  letter-spacing:-.015em;
+  margin:0;
+  text-wrap:balance;
+}
+.masthead h1 em{font-style:italic;color:var(--accent);font-weight:600}
+.masthead p{margin:0}
+.masthead .intro{
+  max-width:60ch;
+  color:var(--ink-2);
+  font-size:15px;
+}
+
+/* ---------- placar ---------- */
+.placar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:2px;
+  background:var(--line);
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden;
+  margin:20px 0 24px;
+}
+.placar div{
+  flex:1 1 120px;
+  background:var(--surface);
+  padding:12px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.placar b{
+  font-family:var(--f-mono);
+  font-size:22px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  line-height:1.1;
+}
+.placar span{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-family:var(--f-mono)}
+.placar .v1 b{color:var(--st-block)}
+.placar .v2 b{color:var(--st-mid)}
+.placar .v3 b{color:var(--st-good)}
+
+/* ---------- controles ---------- */
+.controles{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.busca{position:relative;flex:1 1 240px;min-width:0}
+.busca input{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--line-2);
+  border-radius:8px;
+  padding:10px 12px 10px 34px;
+  font-size:15px;
+}
+.busca input::placeholder{color:var(--ink-3)}
+.busca svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3)}
+.btn{
+  border:1px solid var(--line-2);
+  background:var(--surface);
+  border-radius:8px;
+  padding:10px 14px;
+  font-size:14px;
+  font-weight:500;
+  transition:background .15s,border-color .15s;
+}
+.btn:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.btn-forte{
+  background:var(--accent);
+  color:var(--accent-ink);
+  border-color:var(--accent);
+  font-weight:600;
+}
+.btn-forte:hover{background:var(--accent);filter:brightness(1.08);border-color:var(--accent)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip{
+  border:1px solid var(--line-2);
+  background:transparent;
+  border-radius:999px;
+  padding:5px 12px;
+  font-size:13px;
+  color:var(--ink-2);
+  white-space:nowrap;
+}
+.chip:hover{border-color:var(--ink-3);color:var(--ink)}
+.chip[aria-pressed="true"]{
+  background:var(--ink);
+  border-color:var(--ink);
+  color:var(--bg);
+  font-weight:500;
+}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+.filtros .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent);font-weight:600}
+
+/* ---------- medidor ---------- */
+.med{
+  flex:none;
+  width:13px;height:13px;
+  border:1.5px solid var(--line-2);
+  border-radius:3px;
+  position:relative;
+  overflow:hidden;
+  background:transparent;
+  margin-top:4px;
+}
+.med[data-n="1"]{
+  border-color:var(--st-block);
+  background:repeating-linear-gradient(45deg,var(--st-block) 0 1.5px,transparent 1.5px 4px);
+}
+.med[data-n="2"]{border-color:var(--st-mid)}
+.med[data-n="2"]::after{content:"";position:absolute;inset:auto 0 0 0;height:50%;background:var(--st-mid)}
+.med[data-n="3"]{border-color:var(--st-good);background:var(--st-good)}
+
+/* ---------- lista de tópicos ---------- */
+.grupo{margin-bottom:26px}
+.grupo-cab{
+  display:flex;align-items:baseline;gap:10px;
+  padding-bottom:7px;margin-bottom:2px;
+  border-bottom:1px solid var(--line);
+}
+.grupo-cab h2{
+  font-family:var(--f-display);
+  font-size:19px;font-weight:600;margin:0;letter-spacing:-.01em;
+}
+.grupo-cab .cont{
+  font-family:var(--f-mono);font-size:11px;color:var(--ink-3);
+  letter-spacing:.08em;margin-left:auto;font-variant-numeric:tabular-nums;
+}
+.linhas{display:flex;flex-direction:column}
+.linha{
+  display:flex;align-items:flex-start;gap:11px;
+  width:100%;text-align:left;
+  background:transparent;border:0;
+  border-bottom:1px solid var(--line);
+  padding:11px 6px 11px 4px;
+  border-radius:0;
+}
+.linha:hover{background:var(--surface)}
+.linha:hover .t-nome{color:var(--accent)}
+.linha .txt{min-width:0;flex:1}
+.t-nome{font-size:15px;font-weight:500;line-height:1.35;transition:color .12s}
+.t-ref{
+  font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);
+  margin-top:2px;display:block;word-break:break-word;
+}
+.t-meta{
+  font-family:var(--f-mono);font-size:11px;color:var(--ink-3);
+  letter-spacing:.04em;white-space:nowrap;padding-top:3px;
+}
+.vazio{
+  padding:34px 16px;text-align:center;color:var(--ink-2);
+  border:1px dashed var(--line-2);border-radius:10px;font-size:15px;
+}
+.nota-base{
+  margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-3);max-width:66ch;
+}
+
+/* ---------- aula ---------- */
+.aula-topo{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
+.voltar{
+  border:0;background:transparent;padding:6px 10px 6px 0;
+  font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-2);
+}
+.voltar:hover{color:var(--accent)}
+.cronometro{
+  margin-left:auto;display:flex;align-items:center;gap:10px;
+}
+.tempo{
+  font-family:var(--f-mono);font-size:26px;font-weight:500;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  color:var(--ink);
+}
+.tempo.correndo{color:var(--accent)}
+
+.cartaz{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:22px 22px 20px;
+  box-shadow:var(--shadow);
+  margin-bottom:8px;
+}
+.cartaz h2{
+  font-family:var(--f-display);
+  font-size:clamp(23px,4.6vw,32px);
+  line-height:1.15;font-weight:700;margin:8px 0 0;
+  letter-spacing:-.015em;text-wrap:balance;
+}
+.cartaz .ref{
+  font-family:var(--f-mono);font-size:12.5px;color:var(--gold);
+  margin-top:7px;letter-spacing:.02em;
+}
+.ordem{
+  font-family:var(--f-display);font-style:italic;font-size:16px;
+  color:var(--ink-2);margin:14px 0 0;padding-top:13px;
+  border-top:1px solid var(--line);
+}
+.ultima{
+  margin-top:14px;padding:11px 13px;
+  background:var(--accent-soft);border:1px solid var(--accent-line);
+  border-radius:8px;font-size:14px;color:var(--ink);
+}
+.ultima b{
+  display:block;font-family:var(--f-mono);font-size:10.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+  margin-bottom:3px;font-weight:600;
+}
+
+.palco{display:grid;grid-template-columns:1fr 290px;gap:22px;align-items:start;margin-top:22px}
+
+/* estações */
+.roteiro{list-style:none;margin:0;padding:0;position:relative}
+.roteiro::before{
+  content:"";position:absolute;left:15px;top:14px;bottom:14px;
+  width:1px;background:var(--line-2);
+}
+.est{position:relative;padding:0 0 16px 46px;}
+.est .no{
+  position:absolute;left:0;top:0;
+  width:31px;height:31px;border-radius:50%;
+  border:1.5px solid var(--line-2);
+  background:var(--bg);
+  display:grid;place-items:center;
+  font-family:var(--f-mono);font-size:13px;font-weight:600;
+  color:var(--ink-3);
+  transition:background .18s,color .18s,border-color .18s;
+}
+.est.feito .no{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.est-cab{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-height:31px;padding-top:5px}
+.est-nome{
+  font-family:var(--f-mono);font-size:11.5px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
+}
+.est.feito .est-nome{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
+.est-perg{
+  font-family:var(--f-display);font-size:17px;line-height:1.4;
+  margin:6px 0 0;text-wrap:pretty;max-width:52ch;
+}
+.est-dica{font-size:13.5px;color:var(--ink-2);margin:6px 0 0;max-width:60ch}
+.est-check{
+  display:inline-flex;align-items:center;gap:7px;margin-top:10px;
+  font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none;
+}
+.est-check input{
+  appearance:none;-webkit-appearance:none;
+  width:15px;height:15px;border:1.5px solid var(--line-2);
+  border-radius:3px;background:var(--surface);flex:none;margin:0;cursor:pointer;
+  display:grid;place-items:center;
+}
+.est-check input:checked{background:var(--accent);border-color:var(--accent)}
+.est-check input:checked::after{
+  content:"";width:8px;height:4px;border-left:2px solid var(--accent-ink);
+  border-bottom:2px solid var(--accent-ink);transform:rotate(-45deg) translate(1px,-1px);
+}
+
+/* aluno */
+.aluno{
+  position:sticky;top:16px;
+  background:var(--raised);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+.aluno-cab{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.aluno-cab svg{color:var(--accent);flex:none}
+.aluno-cab .eyebrow{color:var(--ink-2)}
+.balao{
+  position:relative;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:13px 14px;
+  font-family:var(--f-display);
+  font-size:16px;line-height:1.42;
+  min-height:88px;
+  text-wrap:pretty;
+}
+.balao::after{
+  content:"";position:absolute;left:19px;bottom:-7px;
+  width:11px;height:11px;background:var(--surface-2);
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  transform:rotate(45deg);
+}
+.aluno-acoes{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}
+.aluno-acoes .btn{padding:8px 11px;font-size:13px;flex:1 1 auto}
+.aluno-status{font-size:12px;color:var(--ink-3);margin-top:9px;min-height:16px;font-family:var(--f-mono);letter-spacing:.02em}
+
+/* fechamento */
+.fecho{margin-top:8px;border-top:1px solid var(--line);padding-top:22px}
+.fecho .rot{
+  display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:7px;
+}
+.fecho textarea{
+  width:100%;min-height:92px;resize:vertical;
+  background:var(--surface);border:1px solid var(--line-2);
+  border-radius:9px;padding:11px 13px;font-size:15px;line-height:1.5;
+  font-family:var(--f-ui);
+}
+.fecho textarea::placeholder{color:var(--ink-3)}
+.notas{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+.nota-btn{
+  flex:1 1 170px;
+  display:flex;align-items:center;gap:10px;
+  border:1px solid var(--line-2);background:var(--surface);
+  border-radius:9px;padding:12px 14px;text-align:left;
+  transition:border-color .15s,background .15s;
+}
+.nota-btn:hover{background:var(--surface-2)}
+.nota-btn strong{display:block;font-size:14.5px;font-weight:600;line-height:1.2}
+.nota-btn small{display:block;font-size:12px;color:var(--ink-2);margin-top:2px}
+.nota-btn[data-n="1"]:hover{border-color:var(--st-block)}
+.nota-btn[data-n="2"]:hover{border-color:var(--st-mid)}
+.nota-btn[data-n="3"]:hover{border-color:var(--st-good)}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);
+  padding:11px 18px;border-radius:999px;font-size:14px;font-weight:500;
+  box-shadow:var(--shadow);z-index:50;max-width:calc(100vw - 32px);
+}
+.toast[hidden]{display:none!important}
+
+/* dialog novo tópico */
+dialog{
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  border-radius:12px;padding:0;max-width:440px;width:calc(100vw - 32px);
+  box-shadow:var(--shadow);
+}
+dialog::backdrop{background:rgba(16,19,25,.55)}
+.dlg{padding:20px}
+.dlg h3{font-family:var(--f-display);font-size:20px;margin:6px 0 14px;font-weight:600}
+.dlg label.rot{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:12px 0 6px}
+.dlg input,.dlg select{
+  width:100%;background:var(--raised);border:1px solid var(--line-2);
+  border-radius:8px;padding:10px 12px;font-size:15px;
+}
+.dlg-acoes{display:flex;gap:9px;justify-content:flex-end;margin-top:20px}
+
+@media (max-width:820px){
+  .palco{grid-template-columns:1fr;gap:20px}
+  .aluno{position:static;order:-1}
+}
+@media (max-width:620px){
+  .chips,.filtros{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:3px;
+  }
+  .chips::-webkit-scrollbar,.filtros::-webkit-scrollbar{display:none}
+  .chip{scroll-snap-align:start}
+}
+@media (max-width:430px){
+  .wrap{padding-inline:16px;padding-block:20px 52px}
+  .cartaz{padding:17px}
+  .est{padding-left:40px}
+  .roteiro::before{left:13px}
+  .est .no{width:27px;height:27px;font-size:12px}
+  .est-cab{min-height:27px;padding-top:3px}
+  .placar div{flex:1 1 45%}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+
+<div class="wrap">
+
+<!-- ============ VISTA: LISTA ============ -->
+<section id="view-lista">
+  <header class="masthead">
+    <p class="eyebrow">Polícia Civil do Paraná · Investigador e Escrivão</p>
+    <h1>Você só sabe se <em>consegue explicar</em>.</h1>
+    <p class="intro">Escolha um tópico, fale em voz alta como se estivesse ensinando alguém que nunca abriu o Vade Mecum, e registre onde a explicação travou. É lá que está o buraco.</p>
+  </header>
+  <hr class="rule-gold">
+
+  <div class="placar" id="placar"></div>
+
+  <div class="controles">
+    <div class="busca">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+      <input id="busca" type="search" placeholder="Buscar tópico, artigo ou lei…" autocomplete="off">
+    </div>
+    <button class="btn" id="btn-novo" type="button">+ Novo tópico</button>
+  </div>
+
+  <div class="chips" id="chips-materia"></div>
+  <div class="filtros" id="chips-filtro"></div>
+
+  <div id="lista"></div>
+
+  <p class="nota-base" id="nota-base">Lista-base montada a partir do conteúdo programático típico de Investigador e Escrivão da PCPR. Confira o seu edital: dá para adicionar tópicos e eles ficam salvos junto com o resto.</p>
+</section>
+
+<!-- ============ VISTA: AULA ============ -->
+<section id="view-aula" hidden>
+  <div class="aula-topo">
+    <button class="voltar" id="btn-voltar" type="button">← Voltar à lista</button>
+    <div class="cronometro">
+      <span class="tempo" id="tempo">00:00</span>
+      <button class="btn" id="btn-cron" type="button">Começar</button>
+    </div>
+  </div>
+
+  <div class="cartaz">
+    <p class="eyebrow" id="aula-materia">—</p>
+    <h2 id="aula-titulo">—</h2>
+    <p class="ref" id="aula-ref" hidden></p>
+    <p class="ordem">Explique em voz alta, do zero, sem consultar nada. Fale como quem ensina — não como quem recita.</p>
+    <div class="ultima" id="aula-ultima" hidden><b>Da última vez você travou aqui</b><span id="aula-ultima-txt"></span></div>
+  </div>
+
+  <div class="palco">
+    <div>
+      <ul class="roteiro" id="roteiro"></ul>
+
+      <div class="fecho">
+        <label class="rot" for="nota-travou">Onde a explicação travou?</label>
+        <textarea id="nota-travou" placeholder="Ex.: não lembrei o prazo do art. 10 do CPP; confundi rastreabilidade com cadeia de custódia; não soube dar exemplo."></textarea>
+
+        <p class="rot" style="margin:20px 0 7px" id="rot-avaliacao">Como foi essa explicação?</p>
+        <div class="notas" role="group" aria-labelledby="rot-avaliacao">
+          <button class="nota-btn" type="button" data-n="1">
+            <span class="med" data-n="1" aria-hidden="true"></span>
+            <span><strong>Travei</strong><small>Não saiu, ou saiu decorado</small></span>
+          </button>
+          <button class="nota-btn" type="button" data-n="2">
+            <span class="med" data-n="2" aria-hidden="true"></span>
+            <span><strong>Com esforço</strong><small>Saiu, mas com buracos</small></span>
+          </button>
+          <button class="nota-btn" type="button" data-n="3">
+            <span class="med" data-n="3" aria-hidden="true"></span>
+            <span><strong>Dominei</strong><small>Expliquei liso, com exemplo</small></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="aluno">
+      <div class="aluno-cab">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="9" r="4"/>
+          <path d="M5 25v-2.5C5 19.5 8 17.5 12 17.5s7 2 7 5V25"/>
+          <path d="M20.5 15.5 24 8"/>
+          <circle cx="24.6" cy="6.4" r="1.7"/>
+        </svg>
+        <div>
+          <p class="eyebrow" style="margin:0">O aluno pergunta</p>
+        </div>
+      </div>
+      <div class="balao" id="balao">Tá, mas me explica primeiro: o que é isso, em uma frase?</div>
+      <div class="aluno-acoes">
+        <button class="btn" id="btn-outra" type="button">Outra pergunta</button>
+        <button class="btn btn-forte" id="btn-ia" type="button" hidden>Perguntas sob medida</button>
+      </div>
+      <p class="aluno-status" id="aluno-status"></p>
+    </aside>
+  </div>
+</section>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<dialog id="dlg-novo">
+  <form method="dialog" class="dlg" id="form-novo">
+    <p class="eyebrow" style="margin:0">Acrescentar ao seu conteúdo</p>
+    <h3>Novo tópico</h3>
+    <label class="rot" for="novo-materia">Matéria</label>
+    <select id="novo-materia"></select>
+    <label class="rot" for="novo-titulo">Tópico</label>
+    <input id="novo-titulo" type="text" placeholder="Ex.: Interrogatório do investigado" required maxlength="140">
+    <label class="rot" for="novo-ref">Referência legal (opcional)</label>
+    <input id="novo-ref" type="text" placeholder="Ex.: arts. 185 a 196 do CPP" maxlength="120">
+    <div class="dlg-acoes">
+      <button class="btn" type="button" id="novo-cancelar">Cancelar</button>
+      <button class="btn btn-forte" type="submit">Adicionar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+"use strict";
+
+/* ==================================================================
+   CONTEÚDO — base do concurso (Investigador / Escrivão · PCPR)
+   Formato: "Título do tópico · referência legal"
+   ================================================================== */
+const CURRICULO = [
+  { id:"cons", nome:"Direito Constitucional", topicos:[
+    "Direitos e deveres individuais e coletivos · art. 5º da CF",
+    "Remédios constitucionais: HC, MS, MI, HD e ação popular",
+    "Direitos sociais · arts. 6º a 11 da CF",
+    "Nacionalidade: brasileiro nato e naturalizado · art. 12",
+    "Direitos políticos e sua perda ou suspensão · arts. 14 a 16",
+    "Organização do Estado: União, Estados, DF e Municípios",
+    "Administração Pública na Constituição · arts. 37 a 41",
+    "Segurança pública e as polícias · art. 144 da CF",
+    "Poder Legislativo, Executivo e Judiciário: funções e freios",
+    "Controle de constitucionalidade: difuso e concentrado",
+    "Processo legislativo e espécies normativas · art. 59",
+    "Defesa do Estado: estado de defesa e estado de sítio",
+    "Aplicabilidade e eficácia das normas constitucionais",
+  ]},
+  { id:"adm", nome:"Direito Administrativo", topicos:[
+    "Princípios da Administração Pública: LIMPE e implícitos",
+    "Poderes administrativos: hierárquico, disciplinar, regulamentar",
+    "Poder de polícia: atributos e ciclo",
+    "Ato administrativo: elementos, atributos e espécies",
+    "Vícios do ato, anulação, revogação e convalidação",
+    "Discricionariedade e vinculação",
+    "Organização administrativa: direta e indireta",
+    "Agentes públicos: cargo, emprego e função",
+    "Regime disciplinar e processo administrativo disciplinar",
+    "Improbidade administrativa · Lei 8.429/1992",
+    "Responsabilidade civil do Estado · art. 37, §6º da CF",
+    "Licitações e contratos · Lei 14.133/2021",
+    "Serviços públicos e bens públicos",
+    "Controle da Administração: interno, externo e judicial",
+  ]},
+  { id:"pen", nome:"Direito Penal", topicos:[
+    "Princípios do Direito Penal: legalidade, lesividade, insignificância",
+    "Lei penal no tempo e retroatividade benéfica · arts. 2º e 3º do CP",
+    "Lei penal no espaço: territorialidade e extraterritorialidade · arts. 5º a 7º",
+    "Teoria do crime: fato típico e seus elementos",
+    "Relação de causalidade e causa superveniente · art. 13 do CP",
+    "Dolo e culpa · art. 18 do CP",
+    "Erro de tipo e erro de proibição · arts. 20 e 21",
+    "Excludentes de ilicitude · art. 23 do CP",
+    "Culpabilidade: imputabilidade, potencial consciência e exigibilidade",
+    "Tentativa, desistência voluntária e arrependimento eficaz · arts. 14 a 16",
+    "Concurso de pessoas: autoria e participação · art. 29",
+    "Concurso de crimes: material, formal e continuado · arts. 69 a 71",
+    "Aplicação da pena: sistema trifásico · art. 68",
+    "Regimes de cumprimento e substituição da pena",
+    "Extinção da punibilidade e prescrição · arts. 107 a 120",
+    "Crimes contra a vida: homicídio e feminicídio · art. 121",
+    "Lesão corporal e violência doméstica · art. 129",
+    "Crimes contra a honra e contra a liberdade individual",
+    "Crimes contra o patrimônio: furto, roubo e extorsão · arts. 155 a 158",
+    "Estelionato e fraudes eletrônicas · art. 171",
+    "Crimes contra a dignidade sexual · arts. 213 a 218",
+    "Crimes contra a fé pública: falsidade documental · arts. 296 a 305",
+    "Crimes contra a Administração Pública · arts. 312 a 337",
+  ]},
+  { id:"proc", nome:"Direito Processual Penal", topicos:[
+    "Princípios e sistemas processuais penais",
+    "Aplicação da lei processual no tempo e no espaço",
+    "Inquérito policial: natureza, características e valor probatório",
+    "Notitia criminis e formas de instauração · art. 5º do CPP",
+    "Diligências da autoridade policial · art. 6º do CPP",
+    "Prazos de conclusão do inquérito e relatório · arts. 10 e 10-A",
+    "Indiciamento: momento, requisitos e consequências",
+    "Arquivamento do inquérito e o papel do Ministério Público",
+    "Ação penal pública e privada · arts. 24 a 62",
+    "Prova: ônus, sistemas de valoração e prova ilícita",
+    "Cadeia de custódia · arts. 158-A a 158-F do CPP",
+    "Exame de corpo de delito e perícias · arts. 158 a 184",
+    "Interrogatório do investigado e direito ao silêncio · arts. 185 a 196",
+    "Testemunhas, reconhecimento de pessoas e acareação · arts. 202 a 230",
+    "Busca e apreensão domiciliar e pessoal · arts. 240 a 250",
+    "Prisão em flagrante: espécies e formalidades · arts. 301 a 310",
+    "Audiência de custódia · art. 310 do CPP",
+    "Prisão preventiva: requisitos e fundamentação · arts. 311 a 316",
+    "Prisão temporária · Lei 7.960/1989",
+    "Medidas cautelares diversas da prisão · art. 319",
+    "Liberdade provisória e fiança",
+    "Competência: critérios de fixação e modificação",
+    "Juiz das garantias · arts. 3º-A a 3º-F",
+    "Nulidades no processo penal · arts. 563 a 573",
+    "Habeas corpus e recursos em espécie",
+  ]},
+  { id:"esp", nome:"Legislação Penal Especial", topicos:[
+    "Lei de Drogas: tráfico, uso e critérios de distinção · Lei 11.343/2006",
+    "Estatuto do Desarmamento: porte, posse e tipos · Lei 10.826/2003",
+    "Lei Maria da Penha e medidas protetivas · Lei 11.340/2006",
+    "Crimes hediondos e equiparados · Lei 8.072/1990",
+    "Organização criminosa e colaboração premiada · Lei 12.850/2013",
+    "Lavagem de dinheiro · Lei 9.613/1998",
+    "Tortura · Lei 9.455/1997",
+    "Abuso de autoridade · Lei 13.869/2019",
+    "Interceptação telefônica · Lei 9.296/1996",
+    "Juizados Especiais Criminais e transação penal · Lei 9.099/1995",
+    "Ato infracional e medidas socioeducativas · ECA, Lei 8.069/1990",
+    "Crimes de trânsito · Lei 9.503/1997",
+    "Crimes cibernéticos e invasão de dispositivo · Leis 12.737/2012 e 14.155/2021",
+    "Racismo e injúria racial · Leis 7.716/1989 e 14.532/2023",
+    "Crimes contra o idoso · Lei 10.741/2003",
+    "Execução penal: regimes, progressão e faltas · Lei 7.210/1984",
+    "Identificação criminal e perfil genético · Lei 12.037/2009",
+    "Crimes contra a ordem tributária e econômica · Lei 8.137/1990",
+  ]},
+  { id:"dh", nome:"Direitos Humanos", topicos:[
+    "Declaração Universal dos Direitos Humanos de 1948",
+    "Gerações ou dimensões dos direitos humanos",
+    "Tratados internacionais e seu status no Brasil · art. 5º, §3º da CF",
+    "Convenção Americana e o Pacto de San José da Costa Rica",
+    "Sistema interamericano: Comissão e Corte",
+    "Convenção contra a Tortura e o Protocolo de Istambul",
+    "Regras de Mandela e Regras de Bangkok",
+    "Uso da força e das armas de fogo por agentes da lei",
+    "Direitos da pessoa presa e da pessoa investigada",
+    "Discriminação racial e direitos das mulheres nos tratados",
+    "Direitos humanos aplicados à atividade policial",
+  ]},
+  { id:"crimi", nome:"Criminologia", topicos:[
+    "Objeto, método e funções da Criminologia",
+    "Escola Clássica e Escola Positiva",
+    "Teoria da Anomia de Durkheim e Merton",
+    "Escola de Chicago e ecologia criminal",
+    "Teoria da associação diferencial de Sutherland",
+    "Labeling approach e criminalização secundária",
+    "Teoria das janelas quebradas e tolerância zero",
+    "Criminologia crítica e radical",
+    "Vitimologia e processos de vitimização",
+    "Prevenção primária, secundária e terciária",
+    "Controle social formal e informal",
+    "Cifra negra, cifra dourada e estatísticas criminais",
+    "Perfil criminológico e criminal profiling",
+  ]},
+  { id:"med", nome:"Medicina Legal", topicos:[
+    "Documentos médico-legais: laudo, auto, parecer e atestado",
+    "Antropologia forense e identificação humana",
+    "Traumatologia: energias de ordem mecânica",
+    "Lesões corporais e classificação médico-legal",
+    "Tanatologia: fenômenos cadavéricos abióticos e transformativos",
+    "Cronotanatognose: estimativa do tempo de morte",
+    "Asfixiologia forense: espécies e sinais",
+    "Sexologia forense e crimes sexuais",
+    "Toxicologia forense e embriaguez",
+    "Local de crime e preservação de vestígios",
+  ]},
+  { id:"inst", nome:"Legislação Institucional", topicos:[
+    "Lei Orgânica da Polícia Civil do Paraná · LC 14/1982",
+    "Estrutura e órgãos da Polícia Civil do Paraná",
+    "Atribuições do Investigador e do Escrivão de Polícia",
+    "Regime disciplinar da Polícia Civil: transgressões e sanções",
+    "Estatuto dos Servidores do Paraná · Lei 6.174/1970",
+    "Deveres, proibições e responsabilidades do servidor",
+    "Processo administrativo disciplinar na PCPR",
+  ]},
+  { id:"port", nome:"Língua Portuguesa", topicos:[
+    "Compreensão e interpretação de texto",
+    "Tipologia e gêneros textuais",
+    "Coesão e coerência textual",
+    "Classes de palavras e seus empregos",
+    "Sintaxe do período simples e do período composto",
+    "Concordância verbal e nominal",
+    "Regência verbal e nominal",
+    "Crase",
+    "Pontuação",
+    "Ortografia e acentuação gráfica",
+    "Semântica: sinonímia, antonímia e ambiguidade",
+    "Figuras de linguagem",
+    "Redação e correspondência oficial",
+  ]},
+  { id:"rlm", nome:"Raciocínio Lógico e Matemático", topicos:[
+    "Proposições, conectivos e tabelas-verdade",
+    "Equivalências lógicas e negações de De Morgan",
+    "Argumentação: validade, falácias e silogismos",
+    "Diagramas lógicos e quantificadores",
+    "Raciocínio sequencial e sequências numéricas",
+    "Análise combinatória: arranjo, permutação e combinação",
+    "Probabilidade",
+    "Razão, proporção e regra de três",
+    "Porcentagem, juros simples e compostos",
+    "Problemas de associação lógica",
+    "Conjuntos e operações",
+  ]},
+  { id:"info", nome:"Noções de Informática", topicos:[
+    "Sistemas operacionais Windows e Linux",
+    "Editores de texto e planilhas: Word, Excel e LibreOffice",
+    "Redes de computadores, internet e intranet",
+    "Navegadores, buscas e correio eletrônico",
+    "Segurança da informação: malware, phishing e engenharia social",
+    "Criptografia, certificado e assinatura digital",
+    "Backup, armazenamento em nuvem e recuperação",
+    "Noções de banco de dados",
+    "Proteção de dados pessoais · LGPD, Lei 13.709/2018",
+  ]},
+];
+
+/* As quatro estações da explicação. A ordem importa: é uma sequência. */
+const ESTACOES = [
+  { nome:"Defina",
+    pergunta:"O que é isso, em uma frase, sem citar artigo e sem jargão?",
+    dica:"Se você precisou dizer “nos termos da lei”, ainda não definiu — só citou." },
+  { nome:"Fundamento",
+    pergunta:"Onde está previsto e por que essa regra existe?",
+    dica:"Diga o dispositivo de cabeça e, principalmente, o problema que ele veio resolver." },
+  { nome:"Mecânica",
+    pergunta:"Como funciona na prática, passo a passo? Quem faz o quê, em que prazo?",
+    dica:"Narre um caso do começo ao fim: sujeitos, atos, prazos, quem autoriza." },
+  { nome:"Fronteira",
+    pergunta:"Com o que isso se confunde, qual é a exceção e onde a banca põe a pegadinha?",
+    dica:"Nomeie o instituto vizinho e separe os dois em uma linha só." },
+];
+
+/* Perguntas do aluno — banco fixo, usado sempre que a IA não estiver disponível. */
+const PERGUNTAS = [
+  "Tá, mas me explica primeiro: o que é isso, em uma frase?",
+  "Por que essa regra existe? O que aconteceria sem ela?",
+  "Me dá um exemplo concreto, com pessoas, horários e o que cada um fez.",
+  "Isso se confunde com o quê? Como eu separo os dois na prova?",
+  "Qual é a exceção? E existe exceção da exceção?",
+  "Quem decide isso? Precisa de autorização judicial ou não?",
+  "Qual é o prazo? Conta de quando até quando?",
+  "Se eu fosse a banca, onde eu trocaria uma palavra para te derrubar?",
+  "Isso mudou por alguma lei recente? O que mudou exatamente?",
+  "E na delegacia, no plantão, como isso aparece de verdade?",
+  "Explica de novo, mas como se eu tivesse doze anos.",
+  "Você acabou de recitar. Agora explica com as suas palavras.",
+  "Qual é o erro mais comum de quem estuda isso?",
+  "Se eu discordar de você, com que argumento eu discordaria?",
+];
+
+/* ==================================================================
+   ESTADO
+   ================================================================== */
+const LS_KEY = "bancada-feynman-pcpr-v1";
+let estado = { topicos:{}, custom:[] };
+let db = null;
+let sample = null;
+let tudo = [];             // lista achatada de tópicos
+let materiaSel = "todas";
+let filtroSel = "todos";
+let termo = "";
+let atual = null;          // tópico aberto na aula
+let cron = { t:0, id:null };
+let iPergunta = 0;
+let perguntasIA = null;
+
+const $ = (s)=>document.querySelector(s);
+const el = (tag,cls)=>{ const n=document.createElement(tag); if(cls) n.className=cls; return n; };
+
+function slug(s){
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60);
+}
+function partes(t){
+  const i = t.indexOf(" · ");
+  return i === -1 ? { nome:t, ref:"" } : { nome:t.slice(0,i), ref:t.slice(i+3) };
+}
+function montarTudo(){
+  tudo = [];
+  for(const m of CURRICULO){
+    for(const t of m.topicos){
+      const p = partes(t);
+      tudo.push({ id: m.id + "-" + slug(p.nome), materia:m.id, materiaNome:m.nome, nome:p.nome, ref:p.ref });
+    }
+  }
+  for(const c of estado.custom){
+    const m = CURRICULO.find(x=>x.id===c.materia) || CURRICULO[0];
+    tudo.push({ id:c.id, materia:m.id, materiaNome:m.nome, nome:c.nome, ref:c.ref||"", proprio:true });
+  }
+}
+
+/* ---------- persistência ---------- */
+function lerLocal(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const o = JSON.parse(raw); if(o && typeof o === "object"){
+      estado.topicos = o.topicos || {}; estado.custom = Array.isArray(o.custom) ? o.custom : [];
+    }}
+  }catch(e){ /* armazenamento indisponível: segue com estado vazio */ }
+}
+function gravarLocal(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(estado)); }catch(e){}
+}
+function gravar(){
+  estado.atualizadoEm = new Date().toISOString();
+  gravarLocal();
+  if(db){
+    db.doc("estudo/progresso").set(JSON.parse(JSON.stringify(estado)))
+      .catch(()=>{ /* mantém a cópia local; nada a fazer aqui */ });
+  }
+}
+function mesclar(remoto){
+  if(!remoto || typeof remoto !== "object") return false;
+  let mudou = false;
+  const rt = remoto.topicos || {};
+  for(const id in rt){
+    const a = estado.topicos[id], b = rt[id];
+    if(!a || (b.ultima||"") > (a.ultima||"")){ estado.topicos[id] = b; mudou = true; }
+  }
+  const rc = Array.isArray(remoto.custom) ? remoto.custom : [];
+  for(const c of rc){
+    if(!estado.custom.some(x=>x.id===c.id)){ estado.custom.push(c); mudou = true; }
+  }
+  return mudou;
+}
+
+/* ==================================================================
+   VISTA: LISTA
+   ================================================================== */
+function nivel(id){ return (estado.topicos[id] && estado.topicos[id].nivel) || 0; }
+
+function renderPlacar(){
+  const c = [0,0,0,0];
+  for(const t of tudo) c[nivel(t.id)]++;
+  const p = $("#placar");
+  p.innerHTML = "";
+  const cels = [
+    { cls:"v0", n:tudo.length, r:"tópicos no total" },
+    { cls:"v1", n:c[1], r:"travados" },
+    { cls:"v2", n:c[2], r:"com esforço" },
+    { cls:"v3", n:c[3], r:"dominados" },
+  ];
+  for(const x of cels){
+    const d = el("div", x.cls);
+    const b = el("b"); b.textContent = x.n;
+    const s = el("span"); s.textContent = x.r;
+    d.append(b, s); p.append(d);
+  }
+}
+
+function renderChips(){
+  const cm = $("#chips-materia");
+  cm.innerHTML = "";
+  const fazChip = (rot, val, sel, host, onClick)=>{
+    const b = el("button","chip");
+    b.type = "button"; b.textContent = rot;
+    b.setAttribute("aria-pressed", String(sel));
+    b.addEventListener("click", onClick);
+    host.append(b);
+  };
+  fazChip("Todas as matérias","todas", materiaSel==="todas", cm, ()=>{ materiaSel="todas"; render(); });
+  for(const m of CURRICULO){
+    fazChip(m.nome, m.id, materiaSel===m.id, cm, ()=>{ materiaSel=m.id; render(); });
+  }
+  const cf = $("#chips-filtro");
+  cf.innerHTML = "";
+  const filtros = [
+    ["Todos","todos"], ["Nunca expliquei","novo"], ["Travados","1"], ["Com esforço","2"], ["Dominados","3"],
+  ];
+  for(const [rot,val] of filtros){
+    fazChip(rot, val, filtroSel===val, cf, ()=>{ filtroSel=val; render(); });
+  }
+}
+
+function passa(t){
+  if(materiaSel !== "todas" && t.materia !== materiaSel) return false;
+  const n = nivel(t.id);
+  if(filtroSel === "novo" && n !== 0) return false;
+  if(["1","2","3"].includes(filtroSel) && String(n) !== filtroSel) return false;
+  if(termo){
+    const alvo = (t.nome + " " + t.ref + " " + t.materiaNome).toLowerCase();
+    if(!alvo.includes(termo)) return false;
+  }
+  return true;
+}
+
+function quando(iso){
+  if(!iso) return "";
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if(d <= 0) return "hoje";
+  if(d === 1) return "ontem";
+  if(d < 30) return "há " + d + " dias";
+  const m = Math.floor(d/30);
+  return "há " + m + (m === 1 ? " mês" : " meses");
+}
+
+function renderLista(){
+  const host = $("#lista");
+  host.innerHTML = "";
+  const visiveis = tudo.filter(passa);
+  if(!visiveis.length){
+    const v = el("p","vazio");
+    v.textContent = "Nenhum tópico com esse filtro. Tente outra matéria, limpe a busca ou cadastre um tópico novo.";
+    host.append(v);
+    return;
+  }
+  for(const m of CURRICULO){
+    const doGrupo = visiveis.filter(t=>t.materia===m.id);
+    if(!doGrupo.length) continue;
+    const g = el("section","grupo");
+    const cab = el("div","grupo-cab");
+    const h = el("h2"); h.textContent = m.nome;
+    const c = el("span","cont");
+    const dom = doGrupo.filter(t=>nivel(t.id)===3).length;
+    c.textContent = dom + "/" + doGrupo.length + " dominados";
+    cab.append(h,c);
+    const ul = el("div","linhas");
+    for(const t of doGrupo){
+      const b = el("button","linha");
+      b.type = "button";
+      const med = el("span","med"); med.dataset.n = String(nivel(t.id)); med.setAttribute("aria-hidden","true");
+      const txt = el("div","txt");
+      const nome = el("div","t-nome"); nome.textContent = t.nome;
+      txt.append(nome);
+      if(t.ref){ const r = el("span","t-ref"); r.textContent = t.ref; txt.append(r); }
+      const meta = el("div","t-meta");
+      const reg = estado.topicos[t.id];
+      meta.textContent = reg ? quando(reg.ultima) + " · " + reg.vezes + "×" : "—";
+      b.append(med, txt, meta);
+      b.addEventListener("click", ()=>abrirAula(t));
+      ul.append(b);
+    }
+    g.append(cab, ul);
+    host.append(g);
+  }
+}
+
+function render(){ montarTudo(); renderPlacar(); renderChips(); renderLista(); }
+
+/* ==================================================================
+   VISTA: AULA
+   ================================================================== */
+function abrirAula(t){
+  atual = t;
+  perguntasIA = null;
+  iPergunta = 0;
+  pararCron(); cron.t = 0; pintaTempo();
+  $("#btn-cron").textContent = "Começar";
+  $("#tempo").classList.remove("correndo");
+
+  $("#aula-materia").textContent = t.materiaNome;
+  $("#aula-titulo").textContent = t.nome;
+  const ref = $("#aula-ref");
+  ref.hidden = !t.ref; ref.textContent = t.ref;
+
+  const reg = estado.topicos[t.id];
+  const u = $("#aula-ultima");
+  if(reg && reg.nota){
+    u.hidden = false;
+    $("#aula-ultima-txt").textContent = reg.nota;
+  } else { u.hidden = true; }
+
+  $("#nota-travou").value = "";
+  $("#balao").textContent = PERGUNTAS[0];
+  $("#aluno-status").textContent = "";
+
+  renderRoteiro();
+  $("#view-lista").hidden = true;
+  $("#view-aula").hidden = false;
+  window.scrollTo(0,0);
+  $("#btn-voltar").focus();
+}
+
+function renderRoteiro(){
+  const ul = $("#roteiro");
+  ul.innerHTML = "";
+  ESTACOES.forEach((e,i)=>{
+    const li = el("li","est");
+    const no = el("span","no"); no.textContent = String(i+1); no.setAttribute("aria-hidden","true");
+    const cab = el("div","est-cab");
+    const nm = el("span","est-nome"); nm.textContent = e.nome;
+    cab.append(nm);
+    const pg = el("p","est-perg"); pg.textContent = e.pergunta;
+    const dc = el("p","est-dica"); dc.textContent = e.dica;
+    const lb = el("label","est-check");
+    const cb = el("input"); cb.type = "checkbox"; cb.id = "est-" + i;
+    const sp = el("span"); sp.textContent = "cobri isso na explicação";
+    lb.append(cb, sp);
+    cb.addEventListener("change", ()=> li.classList.toggle("feito", cb.checked));
+    li.append(no, cab, pg, dc, lb);
+    ul.append(li);
+  });
+}
+
+function pintaTempo(){
+  const m = String(Math.floor(cron.t/60)).padStart(2,"0");
+  const s = String(cron.t%60).padStart(2,"0");
+  $("#tempo").textContent = m + ":" + s;
+}
+function pararCron(){ if(cron.id){ clearInterval(cron.id); cron.id = null; } }
+function alternaCron(){
+  const btn = $("#btn-cron");
+  if(cron.id){
+    pararCron(); btn.textContent = "Retomar"; $("#tempo").classList.remove("correndo");
+  } else {
+    cron.id = setInterval(()=>{ cron.t++; pintaTempo(); }, 1000);
+    btn.textContent = "Pausar"; $("#tempo").classList.add("correndo");
+  }
+}
+
+function proximaPergunta(){
+  const fonte = perguntasIA && perguntasIA.length ? perguntasIA : PERGUNTAS;
+  iPergunta = (iPergunta + 1) % fonte.length;
+  $("#balao").textContent = fonte[iPergunta];
+}
+
+function voltar(){
+  pararCron();
+  $("#view-aula").hidden = true;
+  $("#view-lista").hidden = false;
+  render();
+  window.scrollTo(0,0);
+}
+
+function avaliar(n){
+  if(!atual) return;
+  const anterior = estado.topicos[atual.id] || { vezes:0 };
+  estado.topicos[atual.id] = {
+    nivel: n,
+    vezes: (anterior.vezes || 0) + 1,
+    ultima: new Date().toISOString(),
+    nota: $("#nota-travou").value.trim().slice(0,600),
+    segundos: cron.t,
+  };
+  gravar();
+  const rot = { 1:"Travei", 2:"Com esforço", 3:"Dominei" }[n];
+  toast("Registrado: " + rot + " · " + atual.nome);
+  voltar();
+}
+
+let toastId = null;
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastId);
+  toastId = setTimeout(()=>{ t.hidden = true; }, 3200);
+}
+
+/* ==================================================================
+   O ALUNO, COM IA (capacidade `sample`)
+   ================================================================== */
+async function perguntasSobMedida(){
+  if(!sample || !atual) return;
+  const btn = $("#btn-ia");
+  const st = $("#aluno-status");
+  btn.disabled = true;
+  st.textContent = "O aluno está pensando…";
+  const pedido =
+    "Você é um aluno curioso e um pouco teimoso, estudando para o concurso de Investigador e Escrivão " +
+    "da Polícia Civil do Paraná. Seu professor vai explicar agora o tópico \"" + atual.nome + "\"" +
+    (atual.ref ? " (" + atual.ref + ")" : "") + ", da matéria " + atual.materiaNome + ".\n\n" +
+    "Escreva 5 perguntas curtas e diretas que exponham decoreba: peça exemplo concreto, prazo, " +
+    "quem decide, diferença para o instituto vizinho, exceção, e onde a banca costuma trocar as palavras. " +
+    "Fale como aluno, na segunda pessoa, sem numerar.\n\n" +
+    "Responda apenas com um array JSON de 5 strings em português do Brasil, cada uma com no máximo 130 caracteres. " +
+    "Exemplo do formato: [\"Qual é o prazo, e conta de quando?\"]";
+  try{
+    const r = await sample.json(pedido, { modelTier:"quick" });
+    const lista = Array.isArray(r) ? r.map(String).filter(s=>s.trim()).slice(0,6) : [];
+    if(!lista.length) throw { code:"invalid_json" };
+    perguntasIA = lista;
+    iPergunta = 0;
+    $("#balao").textContent = lista[0];
+    st.textContent = "Perguntas deste tópico · " + lista.length;
+  }catch(e){
+    const cod = e && e.code;
+    if(cod === "not_granted"){
+      btn.hidden = true;
+      st.textContent = "Seguindo com as perguntas fixas.";
+    } else if(cod === "rate_limited"){
+      st.textContent = "Muitos pedidos seguidos. Tente daqui a pouco.";
+    } else {
+      st.textContent = "Não deu para montar as perguntas agora.";
+    }
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ==================================================================
+   NOVO TÓPICO
+   ================================================================== */
+function abrirDialogo(){
+  const sel = $("#novo-materia");
+  sel.innerHTML = "";
+  for(const m of CURRICULO){
+    const o = el("option"); o.value = m.id; o.textContent = m.nome;
+    if(materiaSel === m.id) o.selected = true;
+    sel.append(o);
+  }
+  $("#novo-titulo").value = "";
+  $("#novo-ref").value = "";
+  $("#dlg-novo").showModal();
+}
+function salvarNovo(ev){
+  ev.preventDefault();
+  const nome = $("#novo-titulo").value.trim();
+  if(!nome) return;
+  const materia = $("#novo-materia").value;
+  const ref = $("#novo-ref").value.trim();
+  const id = materia + "-" + slug(nome) + "-p";
+  if(!estado.custom.some(c=>c.id===id)){
+    estado.custom.push({ id, materia, nome, ref });
+    gravar();
+    toast("Tópico adicionado a " + (CURRICULO.find(m=>m.id===materia)||{}).nome);
+  }
+  $("#dlg-novo").close();
+  render();
+}
+
+/* ==================================================================
+   ARRANQUE
+   ================================================================== */
+function ligarEventos(){
+  $("#busca").addEventListener("input", (e)=>{ termo = e.target.value.trim().toLowerCase(); renderLista(); });
+  $("#btn-novo").addEventListener("click", abrirDialogo);
+  $("#novo-cancelar").addEventListener("click", ()=> $("#dlg-novo").close());
+  $("#form-novo").addEventListener("submit", salvarNovo);
+  $("#btn-voltar").addEventListener("click", voltar);
+  $("#btn-cron").addEventListener("click", alternaCron);
+  $("#btn-outra").addEventListener("click", proximaPergunta);
+  $("#btn-ia").addEventListener("click", perguntasSobMedida);
+  for(const b of document.querySelectorAll(".nota-btn")){
+    b.addEventListener("click", ()=> avaliar(Number(b.dataset.n)));
+  }
+  document.addEventListener("keydown",(e)=>{
+    if(e.key === "Escape" && !$("#view-aula").hidden && !$("#dlg-novo").open) voltar();
+  });
+}
+
+function iniciar(){
+  lerLocal();
+  ligarEventos();
+  render();
+
+  // Capacidades chegam depois; a página já funciona sem elas.
+  if(window.claude && typeof window.claude.use === "function"){
+    window.claude.use("db").then((d)=>{
+      if(!d) return;
+      db = d;
+      d.doc("estudo/progresso").onSnapshot((snap)=>{
+        if(!snap.exists) return;
+        if(mesclar(snap.data())){ gravarLocal(); if($("#view-aula").hidden) render(); }
+      }, ()=>{ db = null; });
+    }).catch(()=>{});
+
+    window.claude.use("sample").then((s)=>{
+      if(!s) return;
+      sample = s;
+      $("#btn-ia").hidden = false;
+    }).catch(()=>{});
+  }
+}
+
+if(window.claude && window.claude.hot){
+  window.claude.hot.snapshot(()=>({ atual: atual && atual.id, t: cron.t }));
+  const boot = (dados)=>{
+    iniciar();
+    if(dados && dados.atual){
+      const t = tudo.find(x=>x.id===dados.atual);
+      if(t){ abrirAula(t); cron.t = dados.t || 0; pintaTempo(); }
+    }
+  };
+  window.claude.hot.ready ? window.claude.hot.ready(boot) : boot(window.claude.hot.data || {});
+} else {
+  iniciar();
+}
+})();
+</script>
