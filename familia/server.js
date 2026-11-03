@@ -13,7 +13,7 @@ const DATA = process.env.DATA_DIR || path.join(ROOT, 'data')
 const PORT = Number(process.env.PORT) || 3001
 const MAX_BODY = 25 * 1024 * 1024
 
-const SB_URL = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '')
+const SB_URL = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
 const SB_KEY = (process.env.SUPABASE_KEY || '').trim()
 const USE_DB = Boolean(SB_URL && SB_KEY)
 
