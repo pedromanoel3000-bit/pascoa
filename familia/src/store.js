@@ -107,7 +107,7 @@ export function markRead(key) {
 }
 
 export function joinFamily(code) {
-  setState({ family: code, rev: 0 })
+  setState({ family: code, rev: 0, epoch: null })
   scheduleSync(0)
 }
 
@@ -164,10 +164,16 @@ export async function syncNow() {
     const res = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ family: state.family, since: state.rev, changes: sent }),
+      body: JSON.stringify({ family: state.family, since: state.rev, epoch: state.epoch, changes: sent }),
     })
     if (!res.ok) throw new Error('HTTP ' + res.status)
     const data = await res.json()
+    if (state.epoch && data.epoch !== state.epoch && Object.keys(state.items).length) {
+      // O servidor perdeu os dados (ex.: reiniciou no plano grátis). Reenvia tudo o que este aparelho tem.
+      setState({ epoch: data.epoch, rev: 0, pending: { ...state.items } })
+      syncing = false
+      return syncNow()
+    }
     const items = { ...state.items }
     for (const it of data.items) {
       const cur = items[it.id]
@@ -176,7 +182,7 @@ export async function syncNow() {
     // Só tira da fila o que não mudou de novo enquanto a requisição estava no ar.
     const pending = { ...state.pending }
     for (const s of sent) if (pending[s.id] && pending[s.id].updatedAt === s.updatedAt) delete pending[s.id]
-    setState({ items, pending, rev: data.rev })
+    setState({ items, pending, rev: data.rev, epoch: data.epoch })
     setStatus('online')
   } catch {
     setStatus(navigator.onLine ? 'error' : 'offline')

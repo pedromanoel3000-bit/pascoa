@@ -23,9 +23,11 @@ const fileFor = (code) =>
 
 function loadFamily(code) {
   if (families.has(code)) return families.get(code)
-  let fam = { rev: 0, items: {} }
+  // epoch muda quando o arquivo some (ex.: servidor reiniciado sem disco); o app então reenvia tudo.
+  let fam = { rev: 0, items: {}, epoch: crypto.randomUUID() }
   try {
     fam = JSON.parse(fs.readFileSync(fileFor(code), 'utf8'))
+    if (!fam.epoch) fam.epoch = crypto.randomUUID()
   } catch {}
   families.set(code, fam)
   return fam
@@ -87,10 +89,10 @@ async function handleSync(req, res) {
       changed = true
     }
   }
-  if (changed) saveFamily(code)
-  const since = Number(body.since) || 0
+  if (changed || !fs.existsSync(fileFor(code))) saveFamily(code)
+  const since = body.epoch === fam.epoch ? Number(body.since) || 0 : 0
   const items = Object.values(fam.items).filter((i) => i.rev > since)
-  json(res, 200, { rev: fam.rev, items })
+  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items })
 }
 
 const TYPES = {
