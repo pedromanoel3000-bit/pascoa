@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { byId, list, remove, save, useStore } from '../store.js'
 import { addDays, eventsOn, fmtDate, MONTHS, pad, today, WEEKDAYS, ymd } from '../utils.js'
-import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented } from '../ui.jsx'
+import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
 
 const REPEAT = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' }
 
@@ -12,6 +12,8 @@ export default function Calendar() {
   const [month, setMonth] = useState(() => today().slice(0, 7))
   const [editing, setEditing] = useState(null)
   const [filter, setFilter] = useState([])
+  const touch = useRef(null)
+  useNewIntent(() => setEditing({ date: today() }))
 
   const people = [...list(st, 'member'), ...list(st, 'contact')]
   let events = list(st, 'event')
@@ -54,7 +56,15 @@ export default function Calendar() {
               Hoje
             </button>
           </div>
-          <div className="cal-grid">
+          <div
+            className="cal-grid"
+            onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
+            onTouchEnd={(e) => {
+              const dx = e.changedTouches[0].clientX - (touch.current ?? e.changedTouches[0].clientX)
+              if (Math.abs(dx) > 60) shift(dx < 0 ? 1 : -1)
+              touch.current = null
+            }}
+          >
             {WEEKDAYS.map((w) => (
               <div key={w} className="cal-wd">
                 {w}

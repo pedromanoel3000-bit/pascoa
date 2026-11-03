@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { list, remove, save, useStore } from '../store.js'
 import { addDays, fmtDate, parseYmd, today } from '../utils.js'
 import { Field, Modal, PageHeader } from '../ui.jsx'
+import { toast } from '../toast.jsx'
 
 const SLOTS = ['Café', 'Almoço', 'Jantar']
 
@@ -18,9 +19,9 @@ export default function Meals() {
 
   const sendWeek = () => {
     const ing = meals.filter((m) => days.includes(m.date)).flatMap((m) => splitIng(m.ingredients))
-    if (!ing.length) return alert('Nenhum ingrediente nas refeições desta semana.')
+    if (!ing.length) return toast('Nenhum ingrediente nas refeições desta semana.')
     const n = toShopping(st, ing)
-    alert(`${n} ingrediente(s) enviado(s) para a lista de compras.`)
+    toast(n ? `🛒 ${n} ingrediente(s) enviado(s) para as compras` : 'Tudo já estava na lista de compras')
   }
 
   return (
@@ -147,7 +148,7 @@ function MealForm({ initial, recipes, onClose }) {
             </button>
           )}
           {splitIng(m.ingredients).length > 0 && (
-            <button type="button" className="btn ghost" onClick={() => alert(`${toShopping(st, splitIng(m.ingredients))} item(ns) enviado(s) para Compras.`)}>
+            <button type="button" className="btn ghost" onClick={() => toast(`🛒 ${toShopping(st, splitIng(m.ingredients))} item(ns) enviado(s) para as compras`)}>
               🛒 Para a lista
             </button>
           )}

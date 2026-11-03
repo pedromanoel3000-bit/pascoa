@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { byId, exportBackup, getState, importBackup, remove, resetAll, save, setMe, syncNow, useStore } from '../store.js'
 import { AVATARS, COLORS, resizeImage } from '../utils.js'
 import { Avatar, Field, Modal, PageHeader, useMembers } from '../ui.jsx'
+import { toast } from '../toast.jsx'
 
 export default function Settings() {
   const st = useStore()
@@ -16,7 +17,7 @@ export default function Settings() {
     if (navigator.share) navigator.share({ title: 'Nosso Lar', text }).catch(() => {})
     else {
       await navigator.clipboard?.writeText(text)
-      alert('Convite copiado!')
+      toast('Convite copiado! Cole no WhatsApp.')
     }
   }
   const download = () => {
@@ -32,9 +33,9 @@ export default function Settings() {
     f.text().then((t) => {
       try {
         importBackup(t)
-        alert('Backup importado.')
+        toast('Backup importado')
       } catch (err) {
-        alert('Não foi possível importar: ' + err.message)
+        toast('Não foi possível importar: ' + err.message)
       }
     })
   }
@@ -45,7 +46,21 @@ export default function Settings() {
 
       <div className="card form">
         <Field label="Nome da família">
-          <input value={famName} onChange={(e) => setFamName(e.target.value)} onBlur={() => famName.trim() && save('family', { ...family, id: 'family', name: famName.trim() })} />
+          <input value={famName} onChange={(e) => setFamName(e.target.value)} onBlur={() => famName.trim() && famName.trim() !== family?.name && save('family', { ...family, id: 'family', name: famName.trim() })} />
+        </Field>
+        <Field label="Cor do app (muda para todos da família)">
+          <div className="emoji-row">
+            {COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                className={'swatch' + ((family?.color || COLORS[0]) === c ? ' on' : '')}
+                style={{ background: c }}
+                onClick={() => save('family', { ...family, id: 'family', color: c })}
+                aria-label={'Cor ' + c}
+              />
+            ))}
+          </div>
         </Field>
       </div>
 

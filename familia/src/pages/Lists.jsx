@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { Avatar, Empty, Field, Modal, PageHeader } from '../ui.jsx'
+import { Avatar, Empty, Field, Modal, PageHeader, useNewIntent } from '../ui.jsx'
+import { Swipe, toast, vibrate } from '../toast.jsx'
 
 const ICONS = ['🛒', '🧹', '🎁', '🧳', '💊', '📚', '🔧', '🎉', '📝', '🐾']
 
@@ -9,6 +10,7 @@ export default function Lists() {
   const lists = list(st, 'list').sort((a, b) => a.createdAt - b.createdAt)
   const [openId, setOpenId] = useState(null)
   const [editing, setEditing] = useState(null)
+  useNewIntent(() => setOpenId((lists.find((l) => /compra/i.test(l.title)) || lists[0])?.id || null))
   const current = lists.find((l) => l.id === openId) || null
   const items = list(st, 'listItem')
 
@@ -59,7 +61,11 @@ function ListDetail({ lst, onBack, onEdit, editing, setEditing }) {
       .forEach((title) => save('listItem', { listId: lst.id, title, done: false }))
     setText('')
   }
-  const clearDone = () => done.forEach((i) => remove(i.id))
+  const clearDone = () => {
+    const before = done
+    before.forEach((i) => remove(i.id))
+    toast(`${before.length} item(ns) limpo(s)`, { label: 'Desfazer', run: () => before.forEach((i) => save('listItem', { ...i, deleted: false })) })
+  }
 
   return (
     <div className="page">
@@ -106,20 +112,31 @@ function Item({ item }) {
   const [edit, setEdit] = useState(false)
   const [title, setTitle] = useState(item.title)
   const who = byId(st, item.doneBy || item.createdBy)
-  const toggle = () => update(item.id, { done: !item.done, doneBy: item.done ? null : st.me })
+  const toggle = () => {
+    if (!item.done) vibrate()
+    update(item.id, { done: !item.done, doneBy: item.done ? null : st.me })
+  }
+  const del = () => {
+    const before = item
+    remove(item.id)
+    toast(`“${item.title}” removido`, { label: 'Desfazer', run: () => save('listItem', { ...before, deleted: false }) })
+  }
+  const finish = () => {
+    if (title.trim() && title !== item.title) update(item.id, { title: title.trim() })
+    setEdit(false)
+  }
   return (
-    <li>
+    <Swipe as="li" onRight={toggle} onLeft={del} rightLabel={item.done ? 'Voltar' : 'Pegou ✓'}>
       <input type="checkbox" checked={!!item.done} onChange={toggle} aria-label={item.title} />
       {edit ? (
         <form
           className="grow"
           onSubmit={(e) => {
             e.preventDefault()
-            update(item.id, { title })
-            setEdit(false)
+            finish()
           }}
         >
-          <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => (update(item.id, { title }), setEdit(false))} autoFocus />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={finish} autoFocus />
         </form>
       ) : (
         <span className="grow item-title" onClick={() => setEdit(true)}>
@@ -127,10 +144,10 @@ function Item({ item }) {
         </span>
       )}
       <Avatar member={who} size={22} />
-      <button className="icon-btn small" onClick={() => remove(item.id)} aria-label="Remover">
+      <button className="icon-btn small" onClick={del} aria-label="Remover">
         ✕
       </button>
-    </li>
+    </Swipe>
   )
 }
 

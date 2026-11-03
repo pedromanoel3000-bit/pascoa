@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { byId, list, remove, save, useStore } from '../store.js'
 import { timeAgo } from '../utils.js'
-import { Empty, Fab, Field, Modal, PageHeader } from '../ui.jsx'
+import { Empty, Fab, Field, Modal, PageHeader, useNewIntent } from '../ui.jsx'
+import { toast } from '../toast.jsx'
 
 // Notas e documentos importantes: senha do Wi-Fi, plano de saúde, documentos escaneados…
 export default function Notes() {
   const st = useStore()
   const [editing, setEditing] = useState(null)
+  useNewIntent(() => setEditing({}))
   const notes = list(st, 'note').sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt)
   return (
     <div className="page">
@@ -38,7 +40,7 @@ function NoteForm({ initial, onClose }) {
   const attach = (e) => {
     const f = e.target.files[0]
     if (!f) return
-    if (f.size > 4 * 1024 * 1024) return alert('Arquivo grande demais (máx. 4 MB).')
+    if (f.size > 4 * 1024 * 1024) return toast('Arquivo grande demais (máx. 4 MB)')
     const r = new FileReader()
     r.onload = () => setN({ ...n, file: r.result, fileName: f.name })
     r.readAsDataURL(f)

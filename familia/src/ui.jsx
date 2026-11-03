@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { Icon } from './icons.jsx'
 import { byId, list, useStore } from './store.js'
 
 export function Avatar({ member, size = 36 }) {
@@ -88,7 +89,7 @@ export function PageHeader({ title, children }) {
 export function Fab({ onClick, label = 'Adicionar' }) {
   return (
     <button className="fab" onClick={onClick} aria-label={label}>
-      +
+      <Icon name="plus" size={28} stroke={2.5} />
     </button>
   )
 }
@@ -103,4 +104,22 @@ export function Segmented({ options, value, onChange }) {
       ))}
     </div>
   )
+}
+
+// Abre o formulário de "novo" quando a página é aberta por um atalho (#pagina/new).
+export function useNewIntent(open) {
+  const ref = useRef(open)
+  ref.current = open
+  useEffect(() => {
+    const check = () => {
+      const [page, intent] = location.hash.slice(1).split('/')
+      if (intent === 'new') {
+        history.replaceState(null, '', '#' + page)
+        ref.current()
+      }
+    }
+    check()
+    window.addEventListener('hashchange', check)
+    return () => window.removeEventListener('hashchange', check)
+  }, [])
 }

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { byId, familyCode, joinFamily, list, resetAll, save, setMe, useStore, useSyncStatus } from './store.js'
 import { AVATARS, COLORS } from './utils.js'
 import { Avatar, Field } from './ui.jsx'
+import { Icon } from './icons.jsx'
+import { Toaster } from './toast.jsx'
 import Home from './pages/Home.jsx'
 import Calendar from './pages/Calendar.jsx'
 import Lists from './pages/Lists.jsx'
@@ -17,24 +19,24 @@ import Settings from './pages/Settings.jsx'
 import { unreadCount } from './pages/Chat.jsx'
 
 export const PAGES = {
-  home: { label: 'Mural', icon: '🏠', C: Home },
-  calendar: { label: 'Agenda', icon: '📅', C: Calendar },
-  lists: { label: 'Listas', icon: '🛒', C: Lists },
-  tasks: { label: 'Tarefas', icon: '✅', C: Tasks },
-  chat: { label: 'Chat', icon: '💬', C: Chat },
-  meals: { label: 'Refeições', icon: '🍽️', C: Meals },
-  photos: { label: 'Fotos', icon: '📷', C: Photos },
-  contacts: { label: 'Contatos', icon: '📇', C: Contacts },
-  budget: { label: 'Orçamento', icon: '💰', C: Budget },
-  locator: { label: 'Localização', icon: '📍', C: Locator },
-  notes: { label: 'Notas', icon: '📝', C: Notes },
-  settings: { label: 'Família', icon: '⚙️', C: Settings },
+  home: { label: 'Início', ic: 'home', tint: '#5b4bdb', C: Home },
+  calendar: { label: 'Agenda', ic: 'calendar', tint: '#3e63dd', C: Calendar },
+  lists: { label: 'Listas', ic: 'list', tint: '#12a594', C: Lists },
+  tasks: { label: 'Tarefas', ic: 'tasks', tint: '#46a758', C: Tasks },
+  chat: { label: 'Chat', ic: 'chat', tint: '#0090ff', C: Chat },
+  meals: { label: 'Refeições', ic: 'meals', tint: '#f76b15', C: Meals },
+  photos: { label: 'Fotos', ic: 'photos', tint: '#d6409f', C: Photos },
+  contacts: { label: 'Contatos', ic: 'contacts', tint: '#8e4ec6', C: Contacts },
+  budget: { label: 'Orçamento', ic: 'budget', tint: '#18794e', C: Budget },
+  locator: { label: 'Localização', ic: 'locator', tint: '#e5484d', C: Locator },
+  notes: { label: 'Notas', ic: 'notes', tint: '#ad7f00', C: Notes },
+  settings: { label: 'Família', ic: 'settings', tint: '#6e6c80', C: Settings },
 }
 const BOTTOM = ['home', 'calendar', 'lists', 'chat']
 
 function useHashPage() {
   const get = () => {
-    const p = location.hash.slice(1)
+    const p = location.hash.slice(1).split('/')[0]
     return PAGES[p] || p === 'more' ? p : 'home'
   }
   const [page, setPage] = useState(get)
@@ -52,22 +54,34 @@ export default function App() {
   const st = useStore()
   const page = useHashPage()
   const me = byId(st, st.me)
+  const brand = byId(st, 'family')?.color
+
+  // Cor escolhida pela família (Família → Cor do app).
+  useEffect(() => {
+    const c = brand || '#5b4bdb'
+    document.documentElement.style.setProperty('--brand', c)
+    document.querySelector('meta[name=theme-color]')?.setAttribute('content', c)
+  }, [brand])
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [page])
 
   if (!st.family) return <Welcome />
   if (!me) return <PickMe />
 
   const unread = unreadCount(st)
   const Page = page === 'more' ? More : PAGES[page].C
+  const famName = byId(st, 'family')?.name || 'Nosso Lar'
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <img src="/icon.svg" alt="" /> {byId(st, 'family')?.name || 'Nosso Lar'}
+          <img src="/icon.svg" alt="" /> {famName}
         </div>
         {Object.entries(PAGES).map(([k, p]) => (
           <a key={k} href={'#' + k} className={'side-link' + (page === k ? ' on' : '')}>
-            <span>{p.icon}</span> {p.label}
+            <Icon name={p.ic} size={20} /> {p.label}
             {k === 'chat' && unread > 0 && <b className="badge">{unread}</b>}
           </a>
         ))}
@@ -76,25 +90,31 @@ export default function App() {
       <main className="content">
         <div className="topbar">
           <span className="brand">
-            <img src="/icon.svg" alt="" /> {byId(st, 'family')?.name || 'Nosso Lar'}
+            <img src="/icon.svg" alt="" /> {famName}
           </span>
           <SyncBadge />
           <a href="#settings">
             <Avatar member={me} size={32} />
           </a>
         </div>
-        <Page />
+        <Page key={page} />
       </main>
+      <Toaster />
       <nav className="bottom-nav">
         {BOTTOM.map((k) => (
           <a key={k} href={'#' + k} className={page === k ? 'on' : ''}>
-            <span>{PAGES[k].icon}</span>
+            <span className="nav-ic">
+              <Icon name={PAGES[k].ic} />
+            </span>
             {PAGES[k].label}
             {k === 'chat' && unread > 0 && <b className="badge">{unread}</b>}
           </a>
         ))}
         <a href="#more" className={page === 'more' || !BOTTOM.includes(page) ? 'on' : ''}>
-          <span>☰</span>Mais
+          <span className="nav-ic">
+            <Icon name="menu" />
+          </span>
+          Mais
         </a>
       </nav>
     </div>
@@ -108,8 +128,10 @@ function More() {
         {Object.entries(PAGES)
           .filter(([k]) => !BOTTOM.includes(k))
           .map(([k, p]) => (
-            <a key={k} href={'#' + k} className="more-tile">
-              <span>{p.icon}</span>
+            <a key={k} href={'#' + k} className="more-tile" style={{ '--t': p.tint }}>
+              <span className="tile-ic">
+                <Icon name={p.ic} size={24} />
+              </span>
               {p.label}
             </a>
           ))}

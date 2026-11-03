@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
 import { addDays, fmtDate, parseYmd, today, ymd } from '../utils.js'
-import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useMembers } from '../ui.jsx'
+import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useMembers, useNewIntent } from '../ui.jsx'
+import { Swipe, toast, vibrate } from '../toast.jsx'
 
 const REPEAT = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês' }
 
@@ -19,6 +20,7 @@ export default function Tasks() {
   const members = useMembers()
   const [filter, setFilter] = useState('all')
   const [editing, setEditing] = useState(null)
+  useNewIntent(() => setEditing({}))
   let tasks = list(st, 'task')
   if (filter === 'mine') tasks = tasks.filter((t) => t.assignee === st.me)
   const open = tasks.filter((t) => !t.done).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'))
@@ -74,18 +76,29 @@ function TaskRow({ task, onOpen }) {
       save('task', { ...task, id: undefined, createdAt: undefined, done: false, due: nextDue(task.due, task.repeat) })
     }
     update(task.id, { done: !task.done, doneBy: st.me, doneAt: Date.now(), repeat: task.done ? task.repeat : 'none' })
+    if (!task.done) {
+      vibrate()
+      toast(`“${task.title}” concluída 🎉`)
+    }
+  }
+  const del = () => {
+    const before = task
+    remove(task.id)
+    toast('Tarefa apagada', { label: 'Desfazer', run: () => save('task', { ...before, deleted: false }) })
   }
   return (
-    <div className={'card task-row' + (task.done ? ' done' : '')}>
-      <input type="checkbox" checked={!!task.done} onChange={toggle} aria-label={task.title} />
-      <button className="grow task-main" onClick={onOpen}>
-        <b>{task.title}</b>
-        <span className={'small ' + (late ? 'late' : 'muted')}>
-          {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${REPEAT[task.repeat]}`} {task.points > 1 && `⭐ ${task.points}`}
-        </span>
-      </button>
-      {task.assignee && <Avatar member={byId(st, task.assignee)} size={30} />}
-    </div>
+    <Swipe className="task-swipe" onRight={toggle} onLeft={del} rightLabel={task.done ? 'Reabrir' : 'Concluir'}>
+      <div className={'card task-row' + (task.done ? ' done' : '')}>
+        <input type="checkbox" checked={!!task.done} onChange={toggle} aria-label={task.title} />
+        <button className="grow task-main" onClick={onOpen}>
+          <b>{task.title}</b>
+          <span className={'small ' + (late ? 'late' : 'muted')}>
+            {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${REPEAT[task.repeat]}`} {task.points > 1 && `⭐ ${task.points}`}
+          </span>
+        </button>
+        {task.assignee && <Avatar member={byId(st, task.assignee)} size={30} />}
+      </div>
+    </Swipe>
   )
 }
 

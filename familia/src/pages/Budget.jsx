@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { byId, list, remove, save, useStore } from '../store.js'
 import { fmtDate, money, MONTHS, pad, today } from '../utils.js'
-import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented } from '../ui.jsx'
+import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
 
 const CATS = ['Mercado', 'Casa', 'Contas', 'Transporte', 'Saúde', 'Escola', 'Lazer', 'Roupas', 'Salário', 'Outros']
 
@@ -9,6 +9,7 @@ export default function Budget() {
   const st = useStore()
   const [month, setMonth] = useState(() => today().slice(0, 7))
   const [editing, setEditing] = useState(null)
+  useNewIntent(() => setEditing({}))
   const entries = list(st, 'expense')
     .filter((e) => e.date?.startsWith(month))
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
