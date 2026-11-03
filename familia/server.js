@@ -198,6 +198,17 @@ async function handleSync(req, res) {
   json(res, 200, { rev: fam.rev, epoch: fam.epoch, items })
 }
 
+// Diz onde os dados estão sendo guardados e se o banco responde (sem expor chaves).
+async function handleHealth(res) {
+  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file' })
+  try {
+    await sb('families?select=family&limit=1')
+    json(res, 200, { ok: true, storage: 'supabase', db: 'ok' })
+  } catch (err) {
+    json(res, 200, { ok: false, storage: 'supabase', db: err.message.slice(0, 200) })
+  }
+}
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
@@ -229,7 +240,7 @@ function serveStatic(req, res) {
 http
   .createServer((req, res) => {
     if (req.url.startsWith('/api/sync') && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
-    if (req.url.startsWith('/api/health')) return json(res, 200, { ok: true })
+    if (req.url.startsWith('/api/health')) return handleHealth(res)
     if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res)
     json(res, 404, { error: 'not found' })
   })

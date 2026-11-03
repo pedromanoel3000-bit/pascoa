@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { byId, familyCode, joinFamily, list, save, setMe, useStore, useSyncStatus } from './store.js'
+import { byId, familyCode, joinFamily, list, resetAll, save, setMe, useStore, useSyncStatus } from './store.js'
 import { AVATARS, COLORS } from './utils.js'
 import { Avatar, Field } from './ui.jsx'
 import Home from './pages/Home.jsx'
@@ -194,16 +194,43 @@ function PickMe() {
   const st = useStore()
   const status = useSyncStatus()
   const members = list(st, 'member')
+  const family = byId(st, 'family')
   const [name, setName] = useState('')
   const add = (e) => {
     e.preventDefault()
     const m = save('member', { name: name.trim(), color: COLORS[members.length % COLORS.length], emoji: AVATARS[members.length % AVATARS.length] })
     setMe(m.id)
   }
+  // O servidor respondeu e não há nada com esse código: provavelmente foi digitado errado.
+  const notFound = status === 'online' && !family && members.length === 0
+  const waiting = !family && members.length === 0 && !notFound
+  const back = () => resetAll()
+
   return (
     <div className="welcome">
       <h1>Quem é você?</h1>
-      <p className="muted">{byId(st, 'family')?.name || (status === 'online' ? 'Família encontrada' : 'Buscando a família…')}</p>
+      <p className="muted">
+        Código: <b>{st.family}</b>
+        {family && <> · {family.name}</>}
+      </p>
+      {waiting && (
+        <div className="card">
+          {status === 'error' ? (
+            <p className="late">Não consegui falar com o servidor. Tentando de novo…</p>
+          ) : status === 'offline' ? (
+            <p className="late">Sem internet. Conecte-se para buscar a família.</p>
+          ) : (
+            <p>Buscando a família… Se o servidor estava dormindo, isso pode levar até 1 minuto.</p>
+          )}
+        </div>
+      )}
+      {notFound && (
+        <div className="card">
+          <p className="late">Não encontrei nenhuma família com o código {st.family}.</p>
+          <p className="muted small">Confira o código em Família → Convidar, no aparelho onde a família foi criada.</p>
+        </div>
+      )}
+      {members.length > 0 && <p className="muted">Toque no seu nome:</p>}
       <div className="pick-list">
         {members.map((m) => (
           <button key={m.id} className="pick" onClick={() => setMe(m.id)}>
@@ -212,12 +239,17 @@ function PickMe() {
           </button>
         ))}
       </div>
-      <form className="card form" onSubmit={add}>
-        <Field label="Não está na lista? Digite seu nome">
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </Field>
-        <button className="btn primary">Entrar como novo membro</button>
-      </form>
+      {family && (
+        <form className="card form" onSubmit={add}>
+          <Field label="Não está na lista? Digite seu nome">
+            <input value={name} onChange={(e) => setName(e.target.value)} required />
+          </Field>
+          <button className="btn primary">Entrar como novo membro</button>
+        </form>
+      )}
+      <button className="btn ghost" onClick={back}>
+        Voltar e digitar outro código
+      </button>
     </div>
   )
 }
