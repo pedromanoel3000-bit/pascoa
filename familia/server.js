@@ -1,5 +1,6 @@
 // Servidor do Nosso Lar: guarda os dados de cada família e serve o app.
 // Sem dependências: só Node 18+.  Uso: npm run serve  (porta 3001 ou $PORT)
+// Com SUPABASE_URL e SUPABASE_KEY definidos, os dados vão para o Supabase; senão, para a pasta data/.
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -12,37 +13,133 @@ const DATA = process.env.DATA_DIR || path.join(ROOT, 'data')
 const PORT = Number(process.env.PORT) || 3001
 const MAX_BODY = 25 * 1024 * 1024
 
-fs.mkdirSync(DATA, { recursive: true })
+const SB_URL = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '')
+const SB_KEY = (process.env.SUPABASE_KEY || '').trim()
+const USE_DB = Boolean(SB_URL && SB_KEY)
 
-const families = new Map()
+if (!USE_DB) fs.mkdirSync(DATA, { recursive: true })
+
+const families = new Map() // código -> dados da família em memória
+const loading = new Map() // código -> carregamento em andamento
 const saveTimers = new Map()
+const dirty = new Map() // código -> Map(id -> item) ainda não gravados no banco
 
-// O código da família funciona como senha: o arquivo usa o hash dele.
-const fileFor = (code) =>
-  path.join(DATA, crypto.createHash('sha256').update(code).digest('hex').slice(0, 32) + '.json')
+// O código da família funciona como senha: só o hash dele vai para o disco ou para o banco.
+const keyFor = (code) => crypto.createHash('sha256').update(code).digest('hex').slice(0, 32)
+const fileFor = (code) => path.join(DATA, keyFor(code) + '.json')
 
-function loadFamily(code) {
-  if (families.has(code)) return families.get(code)
+// ---------- Supabase (API REST, sem dependências) ----------
+async function sb(pathAndQuery, opts = {}) {
+  const headers = { apikey: SB_KEY, 'Content-Type': 'application/json', ...opts.headers }
+  if (SB_KEY.startsWith('eyJ')) headers.Authorization = 'Bearer ' + SB_KEY // chaves antigas (JWT)
+  const res = await fetch(`${SB_URL}/rest/v1/${pathAndQuery}`, { ...opts, headers })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${text.slice(0, 300)}`)
+  return text ? JSON.parse(text) : null
+}
+
+async function dbLoad(code) {
+  const key = keyFor(code)
+  let rows = await sb(`families?family=eq.${key}&select=epoch`)
+  if (!rows.length) {
+    await sb('families', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+      body: JSON.stringify([{ family: key, epoch: crypto.randomUUID() }]),
+    })
+    rows = await sb(`families?family=eq.${key}&select=epoch`)
+  }
+  const fam = { rev: 0, items: {}, epoch: rows[0].epoch }
+  // O Supabase devolve no máximo 1000 linhas por vez.
+  for (let offset = 0; ; offset += 1000) {
+    const page = await sb(`items?family=eq.${key}&select=data&order=rev.asc&limit=1000&offset=${offset}`)
+    for (const { data } of page) {
+      fam.items[data.id] = data
+      if (data.rev > fam.rev) fam.rev = data.rev
+    }
+    if (page.length < 1000) break
+  }
+  return fam
+}
+
+async function dbFlush(code) {
+  const pending = dirty.get(code)
+  if (!pending || !pending.size) return
+  dirty.delete(code)
+  const key = keyFor(code)
+  const rows = [...pending.values()].map((data) => ({ family: key, id: data.id, rev: data.rev, data }))
+  // Envia em lotes de até ~4 MB (fotos ocupam bastante).
+  let batch = []
+  let size = 0
+  const send = async () => {
+    if (!batch.length) return
+    await sb('items?on_conflict=family,id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(batch),
+    })
+    batch = []
+    size = 0
+  }
+  try {
+    for (const r of rows) {
+      const len = JSON.stringify(r.data).length
+      if (size + len > 4_000_000) await send()
+      batch.push(r)
+      size += len
+    }
+    await send()
+  } catch (err) {
+    console.error('Falha ao gravar no Supabase, tentando de novo em 5 s:', err.message)
+    const again = dirty.get(code) || new Map()
+    for (const r of rows) if (!again.has(r.id)) again.set(r.id, r.data)
+    dirty.set(code, again)
+    clearTimeout(saveTimers.get(code))
+    saveTimers.set(code, setTimeout(() => dbFlush(code), 5000))
+  }
+}
+
+// ---------- arquivo local (quando não há Supabase) ----------
+function fileLoad(code) {
   // epoch muda quando o arquivo some (ex.: servidor reiniciado sem disco); o app então reenvia tudo.
   let fam = { rev: 0, items: {}, epoch: crypto.randomUUID() }
   try {
     fam = JSON.parse(fs.readFileSync(fileFor(code), 'utf8'))
     if (!fam.epoch) fam.epoch = crypto.randomUUID()
   } catch {}
-  families.set(code, fam)
   return fam
 }
 
-function saveFamily(code) {
+function fileSave(code) {
+  const file = fileFor(code)
+  fs.writeFileSync(file + '.tmp', JSON.stringify(families.get(code)))
+  fs.renameSync(file + '.tmp', file)
+}
+
+// ---------- comum ----------
+async function loadFamily(code) {
+  if (families.has(code)) return families.get(code)
+  if (!loading.has(code)) {
+    const p = (USE_DB ? dbLoad(code) : Promise.resolve(fileLoad(code)))
+      .then((fam) => {
+        families.set(code, fam)
+        if (!USE_DB && !fs.existsSync(fileFor(code))) fileSave(code)
+        return fam
+      })
+      .finally(() => loading.delete(code))
+    loading.set(code, p)
+  }
+  return loading.get(code)
+}
+
+function saveFamily(code, changedItems) {
+  if (USE_DB) {
+    const d = dirty.get(code) || new Map()
+    for (const it of changedItems) d.set(it.id, it)
+    dirty.set(code, d)
+  }
   clearTimeout(saveTimers.get(code))
-  saveTimers.set(
-    code,
-    setTimeout(() => {
-      const file = fileFor(code)
-      fs.writeFileSync(file + '.tmp', JSON.stringify(families.get(code)))
-      fs.renameSync(file + '.tmp', file)
-    }, 300)
-  )
+  saveTimers.set(code, setTimeout(() => (USE_DB ? dbFlush(code) : fileSave(code)), 300))
 }
 
 function readBody(req) {
@@ -77,19 +174,25 @@ async function handleSync(req, res) {
   }
   const code = String(body.family || '').trim().toUpperCase()
   if (!/^[A-Z0-9-]{6,40}$/.test(code)) return json(res, 400, { error: 'invalid family code' })
-  const fam = loadFamily(code)
+  let fam
+  try {
+    fam = await loadFamily(code)
+  } catch (err) {
+    console.error('Falha ao carregar a família:', err.message)
+    return json(res, 503, { error: 'storage unavailable' })
+  }
   const changes = Array.isArray(body.changes) ? body.changes : []
-  let changed = false
+  const changed = []
   for (const c of changes) {
     if (!c || typeof c.id !== 'string' || typeof c.type !== 'string') continue
     const cur = fam.items[c.id]
     if (!cur || (c.updatedAt || 0) >= (cur.updatedAt || 0)) {
       fam.rev += 1
       fam.items[c.id] = { ...c, rev: fam.rev }
-      changed = true
+      changed.push(fam.items[c.id])
     }
   }
-  if (changed || !fs.existsSync(fileFor(code))) saveFamily(code)
+  if (changed.length) saveFamily(code, changed)
   const since = body.epoch === fam.epoch ? Number(body.since) || 0 : 0
   const items = Object.values(fam.items).filter((i) => i.rev > since)
   json(res, 200, { rev: fam.rev, epoch: fam.epoch, items })
@@ -130,4 +233,4 @@ http
     if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res)
     json(res, 404, { error: 'not found' })
   })
-  .listen(PORT, () => console.log(`Nosso Lar rodando em http://localhost:${PORT}`))
+  .listen(PORT, () => console.log(`Nosso Lar rodando em http://localhost:${PORT} — dados ${USE_DB ? 'no Supabase' : 'em ' + DATA}`))

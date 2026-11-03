@@ -37,20 +37,42 @@ Abra http://localhost:3001. Para usar no celular na mesma rede Wi-Fi, abra `http
 
 Para mexer no código com recarga automática, rode `npm start` num terminal e `npm run dev` em outro (abre em http://localhost:5173).
 
-## Colocar na internet (para a família usar de qualquer lugar)
+## Colocar na internet de graça (Render + Supabase)
 
-O servidor é um único arquivo (`server.js`) sem dependências. Em qualquer serviço que rode Node
-(Render, Railway, Fly.io, uma VPS…):
+O **Render** deixa o app no ar e o **Supabase** guarda os dados. Os dois têm plano grátis.
 
-- **Comando de build:** `npm install && npm run build`
-- **Comando de início:** `npm start`
-- **Variáveis:** `PORT` (normalmente o serviço define sozinho) e `DATA_DIR` (pasta onde salvar os dados; use um disco persistente)
+### 1. Supabase (banco de dados)
 
-Use HTTPS (esses serviços já dão), senão a localização e a instalação na tela inicial não funcionam no celular.
+1. Crie uma conta em https://supabase.com e clique em **New project** (escolha a região São Paulo e anote a senha).
+2. No menu da esquerda, abra **SQL Editor**, cole todo o conteúdo do arquivo `supabase.sql` e clique em **Run**.
+3. Copie duas informações, que vão para o Render:
+   - **Project URL** (fica em *Project Settings → Data API* ou no botão *Connect*), algo como `https://abcd1234.supabase.co`
+   - a **chave secreta** (em *Project Settings → API Keys*: a *secret key* `sb_secret_…`, ou a `service_role` na aba de chaves antigas)
+
+A chave secreta dá acesso total ao banco: coloque-a só no Render, nunca no código.
+
+### 2. Render (o app no ar)
+
+1. Em https://render.com clique em **New → Web Service** e escolha o repositório `pascoa`.
+2. Preencha:
+   - **Branch:** a branch onde está o app
+   - **Root Directory:** `familia`
+   - **Build Command:** `npm install --include=dev && npm run build`
+   - **Start Command:** `npm start`
+   - **Instance Type:** Free
+3. Em **Environment Variables**, adicione:
+   - `SUPABASE_URL` = o Project URL
+   - `SUPABASE_KEY` = a chave secreta
+4. Clique em **Deploy**. Quando terminar, o endereço `https://….onrender.com` é o app.
+
+No plano grátis o Render "dorme" depois de 15 minutos sem uso; a primeira abertura depois disso demora cerca de um minuto. Os dados não se perdem, porque ficam no Supabase.
+
+Sem `SUPABASE_URL` e `SUPABASE_KEY`, o servidor guarda os dados na pasta `data/` (ou em `DATA_DIR`).
 
 ## Como os dados são guardados
 
-- Cada família é um arquivo JSON em `data/` (o nome do arquivo é um hash do código).
+- No Supabase, cada registro é uma linha da tabela `items`; sem Supabase, cada família é um arquivo JSON em `data/`. Em ambos, a família é identificada por um hash do código, nunca pelo código em si.
+- Se o servidor perder os dados, o primeiro aparelho que abrir o app reenvia tudo o que tem salvo.
 - Cada registro tem `id`, `type` e `updatedAt`. Em caso de conflito, vale a alteração mais recente.
 - Fotos são reduzidas antes de salvar (até 1280 px).
 - Em **Família → Baixar backup** você salva tudo num arquivo `.json`.
