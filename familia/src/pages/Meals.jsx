@@ -87,7 +87,7 @@ function toShopping(st, ingredients) {
   if (!shop) shop = save('list', { title: 'Compras', icon: '🛒' })
   const existing = new Set(
     list(st, 'listItem')
-      .filter((i) => i.listId === shop.id && !i.done)
+      .filter((i) => i.listId === shop.id && !i.done && !i.archived)
       .map((i) => i.title.toLowerCase())
   )
   let n = 0

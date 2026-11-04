@@ -16,6 +16,7 @@ import Contacts from './pages/Contacts.jsx'
 import Budget from './pages/Budget.jsx'
 import Locator from './pages/Locator.jsx'
 import Notes from './pages/Notes.jsx'
+import Wishes from './pages/Wishes.jsx'
 import Settings from './pages/Settings.jsx'
 import { unreadCount } from './pages/Chat.jsx'
 
@@ -27,6 +28,7 @@ export const PAGES = {
   chat: { label: 'Chat', ic: 'chat', tint: '#0090ff', C: Chat },
   meals: { label: 'Refeições', ic: 'meals', tint: '#f76b15', C: Meals },
   photos: { label: 'Fotos', ic: 'photos', tint: '#d6409f', C: Photos },
+  wishes: { label: 'Desejos', ic: 'gift', tint: '#e5484d', C: Wishes },
   contacts: { label: 'Contatos', ic: 'contacts', tint: '#8e4ec6', C: Contacts },
   budget: { label: 'Orçamento', ic: 'budget', tint: '#18794e', C: Budget },
   locator: { label: 'Localização', ic: 'locator', tint: '#e5484d', C: Locator },

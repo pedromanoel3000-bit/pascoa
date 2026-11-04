@@ -7,13 +7,14 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 
 | Tela | O que faz |
 |---|---|
-| **Mural** | Resumo do dia (agenda, minhas tarefas, listas, cardápio) e recados/fotos com curtidas e comentários |
+| **Mural** | Resumo do dia, contagens regressivas (eventos marcados e aniversários dos próximos 30 dias), recados, fotos e votações rápidas |
 | **Agenda** | Calendário compartilhado com cor por pessoa, eventos que se repetem, filtro por membro e aniversários automáticos |
-| **Listas** | Compras, afazeres, viagem… Itens marcados por quem fez; vários itens de uma vez separados por vírgula |
-| **Tarefas** | Responsável, prazo, repetição e placar de pontos da semana |
+| **Listas** | Compras, afazeres, viagem… Itens marcados por quem fez; sugestões dos itens mais comprados enquanto digita |
+| **Tarefas** | Responsável, prazo, repetição, escala (revezamento entre pessoas) e placar de pontos da semana |
 | **Chat** | Grupo da família e conversas privadas, com fotos e aviso de mensagens não lidas |
 | **Refeições** | Cardápio da semana (café, almoço, jantar), receitas da família e envio dos ingredientes para a lista de compras |
 | **Fotos** | Álbuns compartilhados |
+| **Desejos** | Lista de desejos de cada pessoa; os outros marcam “vou dar este” sem o dono ver |
 | **Contatos** | Médico, escola, serviços… com botão de ligar e de WhatsApp |
 | **Orçamento** | Gastos e entradas por mês, por categoria e por pessoa |
 | **Localização** | Cada um escolhe compartilhar onde está; mapa, rota e check-in |

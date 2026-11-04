@@ -195,6 +195,9 @@ function EventForm({ initial, onClose }) {
             ))}
           </select>
         </Field>
+        <label className="check">
+          <input type="checkbox" checked={!!ev.countdown} onChange={set('countdown')} /> ⏳ Mostrar contagem regressiva no início
+        </label>
         <Field label={ev.allDay ? 'Lembrete (dia inteiro: às 8h do dia)' : 'Lembrete'}>
           <select value={String(ev.remind ?? 30)} onChange={(e) => setEv({ ...ev, remind: e.target.value === 'none' ? 'none' : Number(e.target.value) })}>
             {REMIND.map(([v, l]) => (

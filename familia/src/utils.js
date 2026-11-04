@@ -94,3 +94,31 @@ export function resizeImage(file, max = 1280, quality = 0.8) {
     reader.readAsDataURL(file)
   })
 }
+
+// Próximo dia (a partir de hoje) em que o evento acontece, procurando até ~1 ano à frente.
+export function nextOccurrence(ev, from = today(), maxDays = 400) {
+  if (!ev.date) return null
+  if (!ev.repeat || ev.repeat === 'none') {
+    const end = ev.endDate && ev.endDate > ev.date ? ev.endDate : ev.date
+    if (end < from) return null
+    return ev.date >= from ? ev.date : from
+  }
+  for (let i = 0; i < maxDays; i++) {
+    const d = addDays(from, i)
+    if (occursOn(ev, d)) return d
+  }
+  return null
+}
+
+// Quantos dias entre hoje e a data (0 = hoje).
+export function daysUntil(day, from = today()) {
+  return Math.round((parseYmd(day) - parseYmd(from)) / 86400000)
+}
+
+// Próximo aniversário (data deste ano ou do próximo).
+export function nextBirthday(birthday, from = today()) {
+  const year = Number(from.slice(0, 4))
+  let d = `${year}${birthday.slice(4)}`
+  if (d < from) d = `${year + 1}${birthday.slice(4)}`
+  return d
+}

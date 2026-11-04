@@ -5,6 +5,68 @@ import { Swipe, toast, vibrate } from '../toast.jsx'
 
 const ICONS = ['🛒', '🧹', '🎁', '🧳', '💊', '📚', '🔧', '🎉', '📝', '🐾']
 
+// Itens limpos com "Limpar" ficam arquivados: somem da lista, mas servem de histórico para as sugestões.
+export const activeItems = (st) => list(st, 'listItem').filter((i) => !i.archived)
+const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+// Adiciona um ou vários itens (separados por vírgula ou linha), sem repetir o que já está pendente.
+export function addItems(st, listId, text) {
+  const pending = new Set(activeItems(st).filter((i) => i.listId === listId && !i.done).map((i) => norm(i.title)))
+  const added = []
+  for (const title of text.split(/[,\n]/).map((t) => t.trim()).filter(Boolean)) {
+    if (pending.has(norm(title))) continue
+    pending.add(norm(title))
+    save('listItem', { listId, title, done: false })
+    added.push(title)
+  }
+  return added
+}
+
+// O que mais aparece nesta lista ao longo do tempo.
+export function frequentItems(st, listId) {
+  const map = new Map()
+  for (const i of list(st, 'listItem')) {
+    if (i.listId !== listId || !i.title) continue
+    const k = norm(i.title)
+    const cur = map.get(k) || { key: k, title: i.title, n: 0, last: 0 }
+    cur.n += 1
+    if ((i.createdAt || 0) >= cur.last) {
+      cur.last = i.createdAt || 0
+      cur.title = i.title
+    }
+    map.set(k, cur)
+  }
+  return [...map.values()].sort((a, b) => b.n - a.n || b.last - a.last)
+}
+
+// Sugestões enquanto digita (ou os mais comprados, com o campo vazio).
+export function ItemSuggestions({ listId, text, onPick, max = 8, emptyLabel = 'Comprar de novo' }) {
+  const st = useStore()
+  const pending = new Set(activeItems(st).filter((i) => i.listId === listId && !i.done).map((i) => norm(i.title)))
+  const typed = norm(text.split(/[,\n]/).pop() || '')
+  let options = frequentItems(st, listId).filter((f) => !pending.has(f.key))
+  if (typed) options = options.filter((f) => f.key.includes(typed) && f.key !== typed).sort((a, b) => b.key.startsWith(typed) - a.key.startsWith(typed))
+  else if (text.trim()) options = []
+  options = options.slice(0, max)
+  if (!options.length) return null
+  const pick = (title) => {
+    const parts = text.split(/,/)
+    parts.pop()
+    onPick(title, parts.map((p) => p.trim()).filter(Boolean).join(', '))
+  }
+  return (
+    <div className="suggest">
+      {!typed && <small className="muted">{emptyLabel}:</small>}
+      {options.map((f) => (
+        <button type="button" key={f.key} className="chip suggest-chip" onClick={() => pick(f.title)}>
+          + {f.title}
+          {f.n > 1 && <small className="muted"> {f.n}×</small>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function Lists() {
   const st = useStore()
   const lists = list(st, 'list').sort((a, b) => a.createdAt - b.createdAt)
@@ -12,7 +74,7 @@ export default function Lists() {
   const [editing, setEditing] = useState(null)
   useNewIntent(() => setOpenId((lists.find((l) => /compra/i.test(l.title)) || lists[0])?.id || null))
   const current = lists.find((l) => l.id === openId) || null
-  const items = list(st, 'listItem')
+  const items = activeItems(st)
 
   if (current) return <ListDetail lst={current} onBack={() => setOpenId(null)} onEdit={() => setEditing(current)} editing={editing} setEditing={setEditing} />
 
@@ -45,7 +107,7 @@ export default function Lists() {
 function ListDetail({ lst, onBack, onEdit, editing, setEditing }) {
   const st = useStore()
   const [text, setText] = useState('')
-  const items = list(st, 'listItem')
+  const items = activeItems(st)
     .filter((i) => i.listId === lst.id)
     .sort((a, b) => a.createdAt - b.createdAt)
   const pending = items.filter((i) => !i.done)
@@ -53,18 +115,18 @@ function ListDetail({ lst, onBack, onEdit, editing, setEditing }) {
 
   const add = (e) => {
     e.preventDefault()
-    // Aceita vários itens separados por vírgula ou quebra de linha.
-    text
-      .split(/[,\n]/)
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .forEach((title) => save('listItem', { listId: lst.id, title, done: false }))
+    addItems(st, lst.id, text)
     setText('')
+  }
+  const pick = (title, rest) => {
+    addItems(st, lst.id, title)
+    vibrate()
+    setText(rest ? rest + ', ' : '')
   }
   const clearDone = () => {
     const before = done
-    before.forEach((i) => remove(i.id))
-    toast(`${before.length} item(ns) limpo(s)`, { label: 'Desfazer', run: () => before.forEach((i) => save('listItem', { ...i, deleted: false })) })
+    before.forEach((i) => update(i.id, { archived: true }))
+    toast(before.length === 1 ? '1 item limpo' : `${before.length} itens limpos`, { label: 'Desfazer', run: () => before.forEach((i) => update(i.id, { archived: false })) })
   }
 
   return (
@@ -81,6 +143,7 @@ function ListDetail({ lst, onBack, onEdit, editing, setEditing }) {
         <input className="grow" value={text} onChange={(e) => setText(e.target.value)} placeholder="Adicionar item (ex.: leite, pão, ovos)" autoFocus />
         <button className="btn primary">Adicionar</button>
       </form>
+      <ItemSuggestions listId={lst.id} text={text} onPick={pick} max={text.trim() ? 6 : 12} emptyLabel={/compra/i.test(lst.title) ? 'Comprar de novo' : 'Usados antes'} />
       {items.length === 0 && <Empty icon="📝" text="Lista vazia." />}
       <ul className="checklist">
         {pending.map((i) => (

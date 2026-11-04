@@ -15,6 +15,22 @@ function nextDue(due, repeat) {
   return ymd(d)
 }
 
+// Na escala, a próxima vez vai para a pessoa seguinte da lista.
+export function nextAssignee(task) {
+  const r = task.rotation || []
+  if (r.length < 2) return task.assignee
+  const i = r.indexOf(task.assignee)
+  return r[(i + 1) % r.length]
+}
+
+// Concluir (ou reabrir) uma tarefa. Se ela se repete, cria a próxima vez.
+export function toggleTask(task, me) {
+  if (!task.done && task.repeat && task.repeat !== 'none') {
+    save('task', { ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due: nextDue(task.due, task.repeat), assignee: nextAssignee(task) })
+  }
+  update(task.id, task.done ? { done: false } : { done: true, doneBy: me, doneAt: Date.now(), repeat: 'none', rotation: [] })
+}
+
 export default function Tasks() {
   const st = useStore()
   const members = useMembers()
@@ -71,11 +87,9 @@ export default function Tasks() {
 function TaskRow({ task, onOpen }) {
   const st = useStore()
   const late = !task.done && task.due && task.due < today()
+  const next = !task.done && task.rotation?.length > 1 ? byId(st, nextAssignee(task)) : null
   const toggle = () => {
-    if (!task.done && task.repeat && task.repeat !== 'none') {
-      save('task', { ...task, id: undefined, createdAt: undefined, done: false, due: nextDue(task.due, task.repeat) })
-    }
-    update(task.id, { done: !task.done, doneBy: st.me, doneAt: Date.now(), repeat: task.done ? task.repeat : 'none' })
+    toggleTask(task, st.me)
     if (!task.done) {
       vibrate()
       toast(`“${task.title}” concluída 🎉`)
@@ -93,7 +107,7 @@ function TaskRow({ task, onOpen }) {
         <button className="grow task-main" onClick={onOpen}>
           <b>{task.title}</b>
           <span className={'small ' + (late ? 'late' : 'muted')}>
-            {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${REPEAT[task.repeat]}`} {task.points > 1 && `⭐ ${task.points}`}
+            {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${REPEAT[task.repeat]}`} {task.points > 1 && `⭐ ${task.points}`} {next && `🔄 depois: ${next.name}`}
           </span>
         </button>
         {task.assignee && <Avatar member={byId(st, task.assignee)} size={30} />}
@@ -105,9 +119,12 @@ function TaskRow({ task, onOpen }) {
 function TaskForm({ initial, onClose }) {
   const [t, setT] = useState({ title: '', due: '', assignee: null, repeat: 'none', points: 1, notes: '', ...initial })
   const set = (k) => (e) => setT({ ...t, [k]: e.target.value })
+  const rotating = t.repeat !== 'none'
   const submit = (e) => {
     e.preventDefault()
-    save('task', t)
+    const rotation = rotating ? t.rotation || [] : []
+    const assignee = rotation.length > 1 && !rotation.includes(t.assignee) ? rotation[0] : t.assignee
+    save('task', { ...t, rotation, assignee })
     onClose()
   }
   return (
@@ -136,6 +153,12 @@ function TaskForm({ initial, onClose }) {
             ))}
           </select>
         </Field>
+        {rotating && (
+          <Field label="Escala: revezar entre (toque na ordem do revezamento)">
+            <MemberPicker value={t.rotation || []} onChange={(rotation) => setT({ ...t, rotation, assignee: t.assignee && rotation.includes(t.assignee) ? t.assignee : rotation[0] || t.assignee })} />
+            {(t.rotation || []).length > 1 && <RotationPreview rotation={t.rotation} />}
+          </Field>
+        )}
         <Field label="Observações">
           <textarea value={t.notes} onChange={set('notes')} rows={2} />
         </Field>
@@ -157,5 +180,14 @@ function TaskForm({ initial, onClose }) {
         </div>
       </form>
     </Modal>
+  )
+}
+
+function RotationPreview({ rotation }) {
+  const st = useStore()
+  return (
+    <p className="muted small rotation">
+      Ordem: {rotation.map((id) => byId(st, id)?.name).filter(Boolean).join(' → ')} → de novo
+    </p>
   )
 }

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { addDays, eventsOn, fmtDate, parseYmd, resizeImage, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
+import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, resizeImage, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
 import { Avatar, Empty, useMembers } from '../ui.jsx'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { PushBanner } from './PushSettings.jsx'
+import { toggleTask } from './Tasks.jsx'
+import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
 
 const QUICK = [
   ['#calendar/new', 'calendar', 'Evento', '#3e63dd'],
@@ -68,6 +70,7 @@ export default function Home() {
       </section>
 
       <PushBanner />
+      <Countdowns />
 
       <div className="quick">
         {QUICK.map(([href, ic, label, tint]) => (
@@ -117,8 +120,8 @@ export default function Home() {
                   type="checkbox"
                   onChange={() => {
                     vibrate()
-                    update(t.id, { done: true, doneBy: st.me, doneAt: Date.now() })
-                    toast(`“${t.title}” concluída 🎉`, { label: 'Desfazer', run: () => update(t.id, { done: false }) })
+                    toggleTask(t, st.me)
+                    toast(`“${t.title}” concluída 🎉`)
                   }}
                 />
                 <span className="grow">{t.title}</span>
@@ -148,14 +151,13 @@ function ShoppingCard() {
   const [text, setText] = useState('')
   const lists = list(st, 'list').sort((a, b) => a.createdAt - b.createdAt)
   const shop = lists.find((l) => /compra/i.test(l.title)) || lists[0]
-  const items = shop ? list(st, 'listItem').filter((i) => i.listId === shop.id && !i.done).sort((a, b) => a.createdAt - b.createdAt) : []
+  const items = shop ? activeItems(st).filter((i) => i.listId === shop.id && !i.done).sort((a, b) => a.createdAt - b.createdAt) : []
   const add = (e) => {
     e.preventDefault()
     let target = shop
     if (!target) target = save('list', { title: 'Compras', icon: '🛒' })
-    const names = text.split(/[,\n]/).map((t) => t.trim()).filter(Boolean)
-    names.forEach((title) => save('listItem', { listId: target.id, title, done: false }))
-    if (names.length) toast(`Adicionado às ${target.title.toLowerCase()} 🛒`)
+    const added = addItems(st, target.id, text)
+    toast(added.length ? `Adicionado às ${target.title.toLowerCase()} 🛒` : 'Já estava na lista')
     setText('')
   }
   return (
@@ -170,6 +172,18 @@ function ShoppingCard() {
           <Icon name="plus" />
         </button>
       </form>
+      {shop && text.trim() && (
+        <ItemSuggestions
+          listId={shop.id}
+          text={text}
+          max={5}
+          onPick={(title, rest) => {
+            addItems(st, shop.id, title)
+            vibrate()
+            setText(rest ? rest + ', ' : '')
+          }}
+        />
+      )}
       {items.slice(0, 6).map((i) => (
         <label key={i.id} className="mini-check">
           <input
@@ -191,6 +205,7 @@ function Composer() {
   const [text, setText] = useState('')
   const [photo, setPhoto] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [poll, setPoll] = useState(null) // lista de opções quando é votação
   const pick = async (e) => {
     const f = e.target.files[0]
     if (!f) return
@@ -200,6 +215,15 @@ function Composer() {
   }
   const post = (e) => {
     e.preventDefault()
+    if (poll) {
+      const options = poll.map((o) => o.trim()).filter(Boolean)
+      if (!text.trim()) return toast('Escreva a pergunta da votação')
+      if (options.length < 2) return toast('Coloque pelo menos 2 opções')
+      save('post', { text: text.trim(), poll: { options: options.map((t, i) => ({ id: 'o' + i, text: t })) }, likes: [], comments: [] })
+      setText('')
+      setPoll(null)
+      return
+    }
     if (!text.trim() && !photo) return
     const p = save('post', { text: text.trim(), photo, likes: [], comments: [] })
     if (photo) save('photo', { src: photo, caption: text.trim(), album: 'Mural', postId: p.id })
@@ -208,7 +232,32 @@ function Composer() {
   }
   return (
     <form className="card composer" onSubmit={post}>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Escreva um recado para a família…" rows={2} />
+      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder={poll ? 'Qual a pergunta? Ex.: Pizza ou hambúrguer no sábado?' : 'Escreva um recado para a família…'} rows={2} />
+      {poll && (
+        <div className="poll-edit">
+          {poll.map((o, i) => (
+            <div key={i} className="row">
+              <input
+                className="grow"
+                value={o}
+                onChange={(e) => setPoll(poll.map((x, j) => (j === i ? e.target.value : x)))}
+                placeholder={`Opção ${i + 1}`}
+                autoFocus={i === poll.length - 1 && i > 1}
+              />
+              {poll.length > 2 && (
+                <button type="button" className="icon-btn small" onClick={() => setPoll(poll.filter((_, j) => j !== i))} aria-label="Tirar opção">
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          {poll.length < 6 && (
+            <button type="button" className="btn ghost small" onClick={() => setPoll([...poll, ''])}>
+              + Opção
+            </button>
+          )}
+        </div>
+      )}
       {photo && (
         <div className="preview">
           <img src={photo} alt="" />
@@ -218,10 +267,22 @@ function Composer() {
         </div>
       )}
       <div className="row">
-        <label className="btn ghost">
-          📷 Foto
-          <input type="file" accept="image/*" hidden onChange={pick} />
-        </label>
+        {!poll && (
+          <label className="btn ghost">
+            📷 Foto
+            <input type="file" accept="image/*" hidden onChange={pick} />
+          </label>
+        )}
+        <button
+          type="button"
+          className={'btn ghost' + (poll ? ' on' : '')}
+          onClick={() => {
+            setPoll(poll ? null : ['', ''])
+            setPhoto(null)
+          }}
+        >
+          {poll ? '✕ Cancelar votação' : '📊 Votação'}
+        </button>
         <span className="grow" />
         <button className="btn primary" disabled={busy}>
           Publicar
@@ -250,6 +311,9 @@ function Post({ post }) {
     list(st, 'photo')
       .filter((ph) => ph.postId === post.id)
       .forEach((ph) => remove(ph.id))
+    list(st, 'vote')
+      .filter((v) => v.postId === post.id)
+      .forEach((v) => remove(v.id))
   }
   return (
     <article className="card post">
@@ -267,6 +331,7 @@ function Post({ post }) {
       </header>
       {post.text && <p className="post-text">{post.text}</p>}
       {post.photo && <img className="post-photo" src={post.photo} alt="" />}
+      {post.poll && <Poll post={post} />}
       <div className="row post-actions">
         <button className={'btn ghost' + (liked ? ' liked' : '')} onClick={toggleLike}>
           {liked ? '❤️' : '🤍'} {likes.length || ''}
@@ -285,5 +350,117 @@ function Post({ post }) {
         <input className="grow" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Comentar…" />
       </form>
     </article>
+  )
+}
+
+// Votação: cada pessoa tem um voto por votação (registro próprio, para votos simultâneos não se perderem).
+function Poll({ post }) {
+  const st = useStore()
+  const members = useMembers()
+  const votes = list(st, 'vote').filter((v) => v.postId === post.id && v.option)
+  const myId = `vote-${post.id}-${st.me}`
+  const mine = votes.find((v) => v.id === myId)?.option
+  const total = votes.length
+  const counts = Object.fromEntries(post.poll.options.map((o) => [o.id, votes.filter((v) => v.option === o.id)]))
+  const top = Math.max(0, ...Object.values(counts).map((v) => v.length))
+  const missing = members.filter((m) => !votes.some((v) => v.createdBy === m.id))
+  const closed = !!post.closed
+  const vote = (id) => {
+    if (closed) return
+    vibrate()
+    save('vote', { id: myId, postId: post.id, option: mine === id ? null : id, createdBy: st.me })
+  }
+  return (
+    <div className={'poll' + (closed ? ' closed' : '')}>
+      {post.poll.options.map((o) => {
+        const vs = counts[o.id]
+        const pct = total ? Math.round((vs.length / total) * 100) : 0
+        const win = closed && vs.length === top && top > 0
+        return (
+          <button key={o.id} type="button" className={'poll-opt' + (mine === o.id ? ' mine' : '') + (win ? ' win' : '')} onClick={() => vote(o.id)} disabled={closed}>
+            <i style={{ width: pct + '%' }} />
+            <span className="grow">
+              {mine === o.id && '✓ '}
+              {win && '🏆 '}
+              {o.text}
+            </span>
+            <span className="avatars">
+              {vs.slice(0, 4).map((v) => (
+                <Avatar key={v.id} member={byId(st, v.createdBy)} size={20} />
+              ))}
+            </span>
+            <b>{pct}%</b>
+          </button>
+        )
+      })}
+      <div className="row muted small">
+        <span className="grow">
+          {closed ? 'Votação encerrada' : total ? `${total} voto${total > 1 ? 's' : ''}` : 'Toque numa opção para votar'}
+          {!closed && missing.length > 0 && total > 0 && ` · falta: ${missing.map((m) => m.name).join(', ')}`}
+        </span>
+        {post.createdBy === st.me && (
+          <button type="button" className="link" onClick={() => update(post.id, { closed: !closed })}>
+            {closed ? 'reabrir' : 'encerrar'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Contagens regressivas: eventos marcados e aniversários dos próximos 30 dias.
+function Countdowns() {
+  const st = useStore()
+  const day = today()
+  const cards = []
+  for (const ev of list(st, 'event')) {
+    if (!ev.countdown) continue
+    const d = nextOccurrence(ev, day)
+    if (d) cards.push({ id: ev.id, title: ev.title, date: d, n: daysUntil(d, day), href: '#calendar', color: byId(st, ev.members?.[0])?.color })
+  }
+  for (const p of [...list(st, 'member'), ...list(st, 'contact')]) {
+    if (!p.birthday) continue
+    const d = nextBirthday(p.birthday, day)
+    const n = daysUntil(d, day)
+    if (n > 30) continue
+    const age = Number(d.slice(0, 4)) - Number(p.birthday.slice(0, 4))
+    cards.push({
+      id: 'bday-' + p.id,
+      title: `Aniversário de ${p.name}${age > 0 && age < 130 ? ` (${age})` : ''}`,
+      date: d,
+      n,
+      emoji: '🎂',
+      href: p.type === 'member' ? '#wishes/' + p.id : '#calendar',
+      action: p.type === 'member' && p.id !== st.me ? 'Ver lista de desejos ›' : null,
+      color: p.color || '#ffb224',
+    })
+  }
+  cards.sort((a, b) => a.n - b.n)
+  if (!cards.length) return null
+  return (
+    <div className="countdowns">
+      {cards.slice(0, 6).map((c) => (
+        <a key={c.id} href={c.href} className="card countdown" style={{ '--c': c.color || 'var(--primary)' }}>
+          <div className="cd-num">
+            {c.n === 0 ? (
+              <b>{c.emoji || '🎉'}</b>
+            ) : (
+              <>
+                <b>{c.n}</b>
+                <small>{c.n === 1 ? 'dia' : 'dias'}</small>
+              </>
+            )}
+          </div>
+          <div className="grow cd-text">
+            <span className="small muted">{c.n === 0 ? 'É hoje!' : c.n === 1 ? 'Amanhã' : `Faltam ${c.n} dias`}</span>
+            <b>
+              {c.emoji && c.n > 0 ? c.emoji + ' ' : ''}
+              {c.title}
+            </b>
+            <span className="small muted">{c.action || fmtDate(c.date, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+          </div>
+        </a>
+      ))}
+    </div>
   )
 }
