@@ -20,7 +20,7 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 | **Localização** | Cada um escolhe compartilhar onde está; mapa, rota e check-in |
 | **Notas** | Senha do Wi-Fi, documentos e anexos |
 | **Família** | Convite por código, membros (cor, avatar, aniversário), cor do app, notificações, backup e restauração |
-| **Notificações** | Mensagens, tarefas atribuídas, eventos novos, itens nas listas, recados e lembretes (eventos, aniversários às 8h, tarefas do dia às 9h) |
+| **Notificações** | Histórico no sino do topo (últimos 150 por pessoa, agrupado por dia) e avisos no celular: mensagens, tarefas atribuídas, eventos novos, itens nas listas, recados, votações e lembretes |
 
 Os dados ficam salvos no aparelho (funciona sem internet) e sincronizam com o servidor a cada poucos segundos.
 Quem tiver o **código da família** entra nela, então trate o código como uma senha.
@@ -75,7 +75,8 @@ Sem `SUPABASE_URL` e `SUPABASE_KEY`, o servidor guarda os dados na pasta `data/`
 
 - Cada pessoa ativa em **Família → Notificações neste aparelho** (ou no aviso da página inicial) e escolhe o que quer receber.
 - **Android:** funciona no Chrome. **iPhone:** só com o app adicionado à tela de início (Safari → Compartilhar → Adicionar à Tela de Início), iOS 16.4 ou mais novo.
-- Quem está com o app aberto na tela não recebe aviso repetido.
+- Quem está com o app aberto na tela não recebe aviso repetido no celular, mas o aviso fica no histórico (sino 🔔 no topo).
+- O histórico funciona mesmo para quem não ativou as notificações no celular. Mensagens seguidas da mesma conversa viram um item só.
 - As chaves das notificações são criadas sozinhas e guardadas no Supabase (ou em `data/`). Se preferir, defina `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY`.
 
 ### Lembretes no plano grátis do Render

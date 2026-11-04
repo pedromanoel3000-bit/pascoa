@@ -17,11 +17,13 @@ import Budget from './pages/Budget.jsx'
 import Locator from './pages/Locator.jsx'
 import Notes from './pages/Notes.jsx'
 import Wishes from './pages/Wishes.jsx'
+import Notifications, { NotifBell, unreadNotifs, usePendingReads } from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import { unreadCount } from './pages/Chat.jsx'
 
 export const PAGES = {
   home: { label: 'Início', ic: 'home', tint: '#5b4bdb', C: Home },
+  notifications: { label: 'Notificações', ic: 'bell', tint: '#f76b15', C: Notifications },
   calendar: { label: 'Agenda', ic: 'calendar', tint: '#3e63dd', C: Calendar },
   lists: { label: 'Listas', ic: 'list', tint: '#12a594', C: Lists },
   tasks: { label: 'Tarefas', ic: 'tasks', tint: '#46a758', C: Tasks },
@@ -36,6 +38,7 @@ export const PAGES = {
   settings: { label: 'Família', ic: 'settings', tint: '#6e6c80', C: Settings },
 }
 const BOTTOM = ['home', 'calendar', 'lists', 'chat']
+const NOT_IN_MORE = ['notifications'] // fica no sino do topo
 
 function useHashPage() {
   const get = () => {
@@ -57,6 +60,7 @@ export default function App() {
   const st = useStore()
   const page = useHashPage()
   const me = byId(st, st.me)
+  usePendingReads()
   const brand = byId(st, 'family')?.color
 
   // Cor escolhida pela família (Família → Cor do app).
@@ -77,6 +81,7 @@ export default function App() {
   if (!me) return <PickMe />
 
   const unread = unreadCount(st)
+  const notifCount = unreadNotifs(st)
   const Page = page === 'more' ? More : PAGES[page].C
   const famName = byId(st, 'family')?.name || 'Nosso Lar'
 
@@ -90,6 +95,7 @@ export default function App() {
           <a key={k} href={'#' + k} className={'side-link' + (page === k ? ' on' : '')}>
             <Icon name={p.ic} size={20} /> {p.label}
             {k === 'chat' && unread > 0 && <b className="badge">{unread}</b>}
+            {k === 'notifications' && notifCount > 0 && <b className="badge">{notifCount}</b>}
           </a>
         ))}
         <SyncBadge />
@@ -100,6 +106,7 @@ export default function App() {
             <img src="/icon.svg" alt="" /> {famName}
           </span>
           <SyncBadge />
+          <NotifBell />
           <a href="#settings">
             <Avatar member={me} size={32} />
           </a>
@@ -133,7 +140,7 @@ function More() {
     <div className="page">
       <div className="more-grid">
         {Object.entries(PAGES)
-          .filter(([k]) => !BOTTOM.includes(k))
+          .filter(([k]) => !BOTTOM.includes(k) && !NOT_IN_MORE.includes(k))
           .map(([k, p]) => (
             <a key={k} href={'#' + k} className="more-tile" style={{ '--t': p.tint }}>
               <span className="tile-ic">

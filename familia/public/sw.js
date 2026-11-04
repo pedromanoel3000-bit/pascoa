@@ -1,5 +1,5 @@
 // Roda em segundo plano: abre o app sem internet e mostra as notificações.
-const CACHE = 'nosso-lar-v2'
+const CACHE = 'nosso-lar-v3'
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icon.svg', '/manifest.webmanifest'])))
   self.skipWaiting()
@@ -37,19 +37,23 @@ self.addEventListener('push', (e) => {
       badge: '/icon.svg',
       tag: data.tag,
       renotify: Boolean(data.tag),
-      data: { url: data.url || '/' },
+      data: { url: data.url || '/', nid: data.nid || null },
     })
   )
 })
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const url = new URL(e.notification.data?.url || '/', self.location.origin).href
+  const nid = e.notification.data?.nid
+  const target = new URL(e.notification.data?.url || '/', self.location.origin)
+  // ?n=<id> avisa o app qual item do histórico marcar como lido.
+  if (nid) target.search = '?n=' + encodeURIComponent(nid)
+  const url = target.href
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
       const win = wins.find((w) => new URL(w.url).origin === self.location.origin)
       if (win) {
-        win.postMessage({ type: 'open', hash: new URL(url).hash })
+        win.postMessage({ type: 'open', hash: target.hash, nid })
         return win.focus()
       }
       return self.clients.openWindow(url)

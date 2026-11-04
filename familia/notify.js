@@ -8,6 +8,7 @@ const LIST_BATCH_MS = 30_000 // junta vários itens de lista num aviso só
 const DEFAULT_TZ = 'America/Sao_Paulo'
 const MORNING = 8 * 60 // aniversários e eventos de dia inteiro: 8h
 const TASKS_TIME = 9 * 60 // tarefas do dia: 9h
+const INBOX_MAX = 150 // avisos guardados por pessoa no histórico do app
 
 export const CATEGORIES = ['chat', 'tasks', 'events', 'reminders', 'lists', 'posts']
 
@@ -55,8 +56,40 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
     }
   }
 
-  // Envia para os membros indicados, respeitando as preferências e pulando quem está com o app aberto.
+  // Guarda o aviso no histórico do app de cada pessoa. Avisos seguidos com a mesma etiqueta
+  // (ex.: mensagens da mesma conversa) que ainda não foram lidos viram um item só.
+  function record(key, fam, memberIds, category, payload) {
+    const ids = {}
+    const now = Date.now()
+    const inbox = Object.values(fam.items).filter((i) => i.type === 'notif' && !i.deleted)
+    for (const m of new Set(memberIds)) {
+      if (fam.items[m]?.type !== 'member' || fam.items[m].deleted) continue
+      const same = payload.tag && inbox.find((n) => n.to === m && !n.read && n.tag === payload.tag)
+      const item = putItem(key, fam, {
+        id: same ? same.id : 'n-' + crypto.randomUUID().replace(/-/g, '').slice(0, 16),
+        type: 'notif',
+        to: m,
+        category,
+        title: payload.title,
+        body: payload.body,
+        url: payload.url,
+        tag: payload.tag || null,
+        count: same ? (same.count || 1) + 1 : 1,
+        read: false,
+        createdAt: now,
+      })
+      ids[m] = item.id
+      if (!same) {
+        const mine = inbox.filter((n) => n.to === m).sort((a, b) => a.createdAt - b.createdAt)
+        for (const old of mine.slice(0, Math.max(0, mine.length + 1 - INBOX_MAX))) putItem(key, fam, { id: old.id, type: 'notif', deleted: true })
+      }
+    }
+    return ids
+  }
+
+  // Guarda no histórico e envia para os celulares, respeitando as preferências e pulando quem está com o app aberto.
   function notify(key, fam, memberIds, category, payload, { skipDevice } = {}) {
+    const nids = record(key, fam, memberIds, category, payload)
     const now = Date.now()
     const targets = subs(fam).filter(
       (s) =>
@@ -65,7 +98,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
         s.device !== skipDevice &&
         !(category !== 'reminders' && now - (lastSeen.get(s.device) || 0) < ACTIVE_MS)
     )
-    return Promise.all(targets.map((s) => sendTo(key, fam, s, payload)))
+    return Promise.all(targets.map((s) => sendTo(key, fam, s, { ...payload, nid: nids[s.member] })))
   }
 
   // ---------- avisos quando algo muda ----------
@@ -117,8 +150,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
     for (const [id, at] of sent) if (now - at > 3 * 86400000) sent.delete(id)
     for (const [key, fam] of families) {
       const ss = subs(fam)
-      if (!ss.length) continue
-      const local = localNow(ss[0].tz || DEFAULT_TZ)
+      const local = localNow(ss[0]?.tz || DEFAULT_TZ)
       checkFamily(key, fam, local)
     }
   }
@@ -187,7 +219,6 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
     },
 
     onChanges(key, fam, actor, device, events) {
-      if (!subs(fam).length) return
       try {
         onChanges(key, fam, actor, device, events)
       } catch (err) {
