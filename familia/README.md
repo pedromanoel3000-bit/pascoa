@@ -15,6 +15,7 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 | **Refeições** | Cardápio da semana (café, almoço, jantar), receitas da família e envio dos ingredientes para a lista de compras |
 | **Fotos** | Álbuns compartilhados |
 | **Desejos** | Lista de desejos de cada pessoa; os outros marcam “vou dar este” sem o dono ver |
+| **Treino** | Programa de 8 semanas por pessoa (fila A → B → C → D), séries com carga, repetições e “sobraram quantas”, cronômetro de descanso, meta da próxima vez (dupla progressão), registro em texto para copiar e importar, histórico e plano |
 | **Contatos** | Médico, escola, serviços… com botão de ligar e de WhatsApp |
 | **Orçamento** | Gastos e entradas por mês, por categoria e por pessoa |
 | **Localização** | Cada um escolhe compartilhar onde está; mapa, rota e check-in |

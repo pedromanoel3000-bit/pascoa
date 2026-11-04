@@ -56,6 +56,13 @@ const P = {
     </>
   ),
   bell: <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />,
+  dumbbell: (
+    <>
+      <path d="M8 12h8M2.5 9.5v5M21.5 9.5v5" />
+      <rect x="4.5" y="6.5" width="3.5" height="11" rx="1" />
+      <rect x="16" y="6.5" width="3.5" height="11" rx="1" />
+    </>
+  ),
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   plus: <path d="M12 5v14M5 12h14" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,

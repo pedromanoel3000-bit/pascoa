@@ -8,7 +8,9 @@ const LIST_BATCH_MS = 30_000 // junta vários itens de lista num aviso só
 const DEFAULT_TZ = 'America/Sao_Paulo'
 const MORNING = 8 * 60 // aniversários e eventos de dia inteiro: 8h
 const TASKS_TIME = 9 * 60 // tarefas do dia: 9h
-const INBOX_MAX = 150 // avisos guardados por pessoa no histórico do app
+const INBOX_MAX = 150
+// Tipos que nunca geram aviso (ex.: o treino de cada pessoa).
+const SEM_AVISO = new Set(['treinoPrograma', 'treinoSessao', 'treinoRascunho']) // avisos guardados por pessoa no histórico do app
 
 export const CATEGORIES = ['chat', 'tasks', 'events', 'reminders', 'lists', 'posts']
 
@@ -112,7 +114,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
     const who = nameOf(fam, actor)
     for (const [prev, it] of events) {
       const isNew = !prev || prev.deleted
-      if (it.deleted) continue
+      if (it.deleted || SEM_AVISO.has(it.type)) continue
       if (it.type === 'message' && isNew) {
         const family = it.conv === 'family'
         const to = family ? others(everyone) : others(String(it.conv).split('|'))

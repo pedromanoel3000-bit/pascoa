@@ -17,6 +17,7 @@ import Budget from './pages/Budget.jsx'
 import Locator from './pages/Locator.jsx'
 import Notes from './pages/Notes.jsx'
 import Wishes from './pages/Wishes.jsx'
+import Treino from './pages/Treino.jsx'
 import Notifications, { NotifBell, unreadNotifs, usePendingReads } from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import { unreadCount } from './pages/Chat.jsx'
@@ -27,6 +28,7 @@ export const PAGES = {
   calendar: { label: 'Agenda', ic: 'calendar', tint: '#3e63dd', C: Calendar },
   lists: { label: 'Listas', ic: 'list', tint: '#12a594', C: Lists },
   tasks: { label: 'Tarefas', ic: 'tasks', tint: '#46a758', C: Tasks },
+  treino: { label: 'Treino', ic: 'dumbbell', tint: '#e54d2e', C: Treino },
   chat: { label: 'Chat', ic: 'chat', tint: '#0090ff', C: Chat },
   meals: { label: 'Refeições', ic: 'meals', tint: '#f76b15', C: Meals },
   photos: { label: 'Fotos', ic: 'photos', tint: '#d6409f', C: Photos },
