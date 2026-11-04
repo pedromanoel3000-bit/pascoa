@@ -472,3 +472,19 @@ input.switch:checked::after { transform: translateX(18px); }
 .card.warn { border-color: color-mix(in srgb, var(--neg) 45%, var(--line)); background: color-mix(in srgb, var(--neg) 7%, var(--card)); display: flex; flex-direction: column; gap: 4px; }
 .card.warn p { margin: 0; }
 .push-banner.lost { border-color: color-mix(in srgb, var(--neg) 45%, var(--line)); background: color-mix(in srgb, var(--neg) 6%, var(--card)); }
+
+/* ---------- repetição personalizada ---------- */
+input[type='radio'] { width: 20px; height: 20px; padding: 0; accent-color: var(--primary); flex: none; }
+.rule-box { display: flex; flex-direction: column; gap: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); margin-top: -4px; }
+.rule-row { display: flex; align-items: center; gap: 8px; }
+.rule-row select { width: auto; flex: 1; }
+input.num { width: 76px; text-align: center; flex: none; }
+.rule-box input, .rule-box select { background: var(--card); }
+.weekday-picker { display: flex; gap: 4px; justify-content: space-between; }
+.wd { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); font-weight: 800; color: var(--muted); display: flex; align-items: center; justify-content: center; flex: none; }
+.wd.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.rule-options { display: flex; flex-direction: column; gap: 10px; }
+.rule-label { font-size: .82rem; color: var(--muted); font-weight: 700; }
+.rule-inline { flex-wrap: wrap; }
+.rule-inline input[type='date'] { width: auto; flex: 1; min-width: 150px; }
+.rule-summary { margin: 0; font-size: .9rem; font-weight: 700; color: var(--primary); }

@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { byId, list, remove, save, useStore } from '../store.js'
-import { addDays, eventsOn, fmtDate, MONTHS, pad, today, WEEKDAYS, ymd } from '../utils.js'
+import { addDays, describeRepeat, eventsOn, finalizeRepeat, fmtDate, MONTHS, pad, today, WEEKDAYS, ymd } from '../utils.js'
+import RepeatField from './Repeat.jsx'
 import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
 
-const REPEAT = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' }
 const REMIND = [['none', 'Sem lembrete'], [0, 'Na hora'], [10, '10 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [120, '2 horas antes'], [1440, '1 dia antes']]
 
 export default function Calendar() {
@@ -120,7 +120,7 @@ function DayList({ events, onOpen }) {
       <div className="grow">
         <b>{e.title}</b>
         {e.place && <div className="muted small">📍 {e.place}</div>}
-        {e.repeat && e.repeat !== 'none' && <div className="muted small">🔁 {REPEAT[e.repeat]}</div>}
+        {e.repeat && e.repeat !== 'none' && <div className="muted small">🔁 {describeRepeat(e)}</div>}
       </div>
       <span className="avatars">
         {(e.members || []).map((id) => (
@@ -150,7 +150,7 @@ function EventForm({ initial, onClose }) {
   const set = (k) => (e) => setEv({ ...ev, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
   const submit = (e) => {
     e.preventDefault()
-    save('event', ev)
+    save('event', { ...ev, ...finalizeRepeat(ev.repeat, ev.rule, ev.date) })
     onClose()
   }
   const del = () => {
@@ -186,15 +186,7 @@ function EventForm({ initial, onClose }) {
             </Field>
           </div>
         )}
-        <Field label="Repetir">
-          <select value={ev.repeat} onChange={set('repeat')}>
-            {Object.entries(REPEAT).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <RepeatField repeat={ev.repeat} rule={ev.rule} anchor={ev.date} onChange={(repeat, rule) => setEv({ ...ev, repeat, rule })} />
         <label className="check">
           <input type="checkbox" checked={!!ev.countdown} onChange={set('countdown')} /> ⏳ Mostrar contagem regressiva no início
         </label>

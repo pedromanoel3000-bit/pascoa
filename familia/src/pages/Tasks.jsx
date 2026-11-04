@@ -1,19 +1,9 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { addDays, fmtDate, parseYmd, today, ymd } from '../utils.js'
+import { describeRepeat, finalizeRepeat, fmtDate, nextTaskDue, today } from '../utils.js'
 import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useMembers, useNewIntent } from '../ui.jsx'
 import { Swipe, toast, vibrate } from '../toast.jsx'
-
-const REPEAT = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês' }
-
-function nextDue(due, repeat) {
-  const base = due || today()
-  if (repeat === 'daily') return addDays(base, 1)
-  if (repeat === 'weekly') return addDays(base, 7)
-  const d = parseYmd(base)
-  d.setMonth(d.getMonth() + 1)
-  return ymd(d)
-}
+import RepeatField from './Repeat.jsx'
 
 // Na escala, a próxima vez vai para a pessoa seguinte da lista.
 export function nextAssignee(task) {
@@ -24,11 +14,15 @@ export function nextAssignee(task) {
 }
 
 // Concluir (ou reabrir) uma tarefa. Se ela se repete, cria a próxima vez.
+// Devolve o novo prazo, ou null quando a repetição terminou.
 export function toggleTask(task, me) {
+  let nextDue
   if (!task.done && task.repeat && task.repeat !== 'none') {
-    save('task', { ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due: nextDue(task.due, task.repeat), assignee: nextAssignee(task) })
+    nextDue = nextTaskDue(task)
+    if (nextDue) save('task', { ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due: nextDue, assignee: nextAssignee(task) })
   }
-  update(task.id, task.done ? { done: false } : { done: true, doneBy: me, doneAt: Date.now(), repeat: 'none', rotation: [] })
+  update(task.id, task.done ? { done: false } : { done: true, doneBy: me, doneAt: Date.now(), repeat: 'none', rule: null, rotation: [] })
+  return nextDue
 }
 
 export default function Tasks() {
@@ -89,10 +83,10 @@ function TaskRow({ task, onOpen }) {
   const late = !task.done && task.due && task.due < today()
   const next = !task.done && task.rotation?.length > 1 ? byId(st, nextAssignee(task)) : null
   const toggle = () => {
-    toggleTask(task, st.me)
+    const nextDue = toggleTask(task, st.me)
     if (!task.done) {
       vibrate()
-      toast(`“${task.title}” concluída 🎉`)
+      toast(nextDue === null ? `“${task.title}” concluída 🎉 Era a última vez da repetição.` : `“${task.title}” concluída 🎉`)
     }
   }
   const del = () => {
@@ -107,7 +101,7 @@ function TaskRow({ task, onOpen }) {
         <button className="grow task-main" onClick={onOpen}>
           <b>{task.title}</b>
           <span className={'small ' + (late ? 'late' : 'muted')}>
-            {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${REPEAT[task.repeat]}`} {task.points > 1 && `⭐ ${task.points}`} {next && `🔄 depois: ${next.name}`}
+            {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${describeRepeat(task)}`} {task.points > 1 && `⭐ ${task.points}`} {next && `🔄 depois: ${next.name}`}
           </span>
         </button>
         {task.assignee && <Avatar member={byId(st, task.assignee)} size={30} />}
@@ -124,7 +118,9 @@ function TaskForm({ initial, onClose }) {
     e.preventDefault()
     const rotation = rotating ? t.rotation || [] : []
     const assignee = rotation.length > 1 && !rotation.includes(t.assignee) ? rotation[0] : t.assignee
-    save('task', { ...t, rotation, assignee })
+    // Tarefa repetida precisa de um prazo para saber quando é a próxima vez.
+    const due = t.repeat !== 'none' && !t.due ? today() : t.due
+    save('task', { ...t, rotation, assignee, due, ...finalizeRepeat(t.repeat, t.rule, due) })
     onClose()
   }
   return (
@@ -144,15 +140,7 @@ function TaskForm({ initial, onClose }) {
             <input type="number" min="1" max="100" value={t.points} onChange={set('points')} />
           </Field>
         </div>
-        <Field label="Repetir">
-          <select value={t.repeat} onChange={set('repeat')}>
-            {Object.entries(REPEAT).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <RepeatField repeat={t.repeat} rule={t.rule} anchor={t.due || today()} onChange={(repeat, rule) => setT({ ...t, repeat, rule })} />
         {rotating && (
           <Field label="Escala: revezar entre (toque na ordem do revezamento)">
             <MemberPicker value={t.rotation || []} onChange={(rotation) => setT({ ...t, rotation, assignee: t.assignee && rotation.includes(t.assignee) ? t.assignee : rotation[0] || t.assignee })} />

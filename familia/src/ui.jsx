@@ -111,9 +111,11 @@ export function useNewIntent(open) {
   const ref = useRef(open)
   ref.current = open
   useEffect(() => {
+    // Só atende o atalho da própria página (senão a página que está saindo "pega" o atalho da outra).
+    const mine = location.hash.slice(1).split('/')[0]
     const check = () => {
       const [page, intent] = location.hash.slice(1).split('/')
-      if (intent === 'new') {
+      if (page === mine && intent === 'new') {
         history.replaceState(null, '', '#' + page)
         ref.current()
       }

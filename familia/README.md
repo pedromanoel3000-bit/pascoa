@@ -8,9 +8,9 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 | Tela | O que faz |
 |---|---|
 | **Mural** | Resumo do dia, contagens regressivas (eventos marcados e aniversários dos próximos 30 dias), recados, fotos e votações rápidas |
-| **Agenda** | Calendário compartilhado com cor por pessoa, eventos que se repetem, filtro por membro e aniversários automáticos |
+| **Agenda** | Calendário compartilhado com cor por pessoa, repetição (inclusive personalizada: a cada N dias/semanas/meses/anos, dias da semana, “3ª quarta do mês”, até uma data ou N vezes), filtro por membro e aniversários automáticos |
 | **Listas** | Compras, afazeres, viagem… Itens marcados por quem fez; sugestões dos itens mais comprados enquanto digita |
-| **Tarefas** | Responsável, prazo, repetição, escala (revezamento entre pessoas) e placar de pontos da semana |
+| **Tarefas** | Responsável, prazo, repetição (com as mesmas opções personalizadas da agenda), escala (revezamento entre pessoas) e placar de pontos da semana |
 | **Chat** | Grupo da família e conversas privadas, com fotos e aviso de mensagens não lidas |
 | **Refeições** | Cardápio da semana (café, almoço, jantar), receitas da família e envio dos ingredientes para a lista de compras |
 | **Fotos** | Álbuns compartilhados |
