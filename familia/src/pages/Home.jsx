@@ -6,6 +6,7 @@ import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { PushBanner } from './PushSettings.jsx'
 import { toggleTask } from './Tasks.jsx'
+import { SLOTS } from './Meals.jsx'
 import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
 
 const QUICK = [
@@ -27,7 +28,9 @@ export default function Home() {
   const myTasks = list(st, 'task')
     .filter((t) => !t.done && (!t.assignee || t.assignee === st.me))
     .sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'))
-  const meal = list(st, 'meal').filter((m) => m.date === day)
+  const meal = list(st, 'meal')
+    .filter((m) => m.date === day)
+    .sort((a, b) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot))
   const posts = list(st, 'post').sort((a, b) => b.createdAt - a.createdAt)
   const hour = new Date().getHours()
   const hello = hour < 5 ? 'Boa noite' : hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'

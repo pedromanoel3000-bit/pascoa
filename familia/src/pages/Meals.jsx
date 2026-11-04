@@ -4,7 +4,7 @@ import { addDays, fmtDate, parseYmd, today } from '../utils.js'
 import { Field, Modal, PageHeader } from '../ui.jsx'
 import { toast } from '../toast.jsx'
 
-const SLOTS = ['Café', 'Almoço', 'Jantar']
+export const SLOTS = ['Café', 'Almoço', 'Lanche', 'Jantar']
 
 const weekStart = (d) => addDays(d, -((parseYmd(d).getDay() + 6) % 7)) // segunda-feira
 
