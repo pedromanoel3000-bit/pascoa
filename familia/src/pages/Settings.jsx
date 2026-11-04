@@ -3,7 +3,7 @@ import { byId, exportBackup, getState, importBackup, remove, resetAll, save, set
 import { AVATARS, COLORS, resizeImage } from '../utils.js'
 import { Avatar, Field, Modal, PageHeader, useMembers } from '../ui.jsx'
 import { toast } from '../toast.jsx'
-import PushSettings from './PushSettings.jsx'
+import PushSettings, { ServerWarning } from './PushSettings.jsx'
 
 export default function Settings() {
   const st = useStore()
@@ -44,6 +44,7 @@ export default function Settings() {
   return (
     <div className="page">
       <PageHeader title="Família" />
+      <ServerWarning />
 
       <div className="card form">
         <Field label="Nome da família">

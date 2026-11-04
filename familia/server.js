@@ -17,6 +17,8 @@ const MAX_BODY = 25 * 1024 * 1024
 const SB_URL = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
 const SB_KEY = (process.env.SUPABASE_KEY || '').trim()
 const USE_DB = Boolean(SB_URL && SB_KEY)
+// Sem Supabase e sem DATA_DIR (disco próprio), os dados ficam numa pasta que o Render grátis apaga ao reiniciar.
+const PERSISTENT = USE_DB || Boolean(process.env.DATA_DIR)
 
 if (!USE_DB) fs.mkdirSync(DATA, { recursive: true })
 
@@ -291,12 +293,12 @@ async function handlePush(req, res, action) {
 
 // Diz onde os dados estão sendo guardados e se o banco responde (sem expor chaves).
 async function handleHealth(res) {
-  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file' })
+  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file', persistent: PERSISTENT })
   try {
     await sb('families?select=family&limit=1')
-    json(res, 200, { ok: true, storage: 'supabase', db: 'ok' })
+    json(res, 200, { ok: true, storage: 'supabase', db: 'ok', persistent: true })
   } catch (err) {
-    json(res, 200, { ok: false, storage: 'supabase', db: err.message.slice(0, 200) })
+    json(res, 200, { ok: false, storage: 'supabase', db: err.message.slice(0, 200), persistent: true })
   }
 }
 
@@ -339,5 +341,7 @@ http
   })
   .listen(PORT, () => {
     console.log(`Nosso Lar rodando em http://localhost:${PORT} — dados ${USE_DB ? 'no Supabase' : 'em ' + DATA}`)
+    if (!PERSISTENT)
+      console.warn('ATENÇÃO: sem SUPABASE_URL/SUPABASE_KEY. Os dados e as chaves das notificações se perdem quando o servidor reinicia.')
     notifier.start()
   })

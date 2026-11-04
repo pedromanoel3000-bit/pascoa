@@ -26,7 +26,11 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
           process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
             ? { publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY }
             : await getConfig('vapid')
-        if (!keys) keys = await setConfig('vapid', webpush.generateVAPIDKeys())
+        if (!keys) {
+          keys = await setConfig('vapid', webpush.generateVAPIDKeys())
+          // Normal só na primeira vez. Se aparecer a cada reinício, o servidor está sem armazenamento permanente.
+          console.warn('Chaves novas das notificações criadas. Aparelhos inscritos com chaves antigas precisam reativar.')
+        }
         const subject = process.env.VAPID_SUBJECT || process.env.RENDER_EXTERNAL_URL || 'https://github.com/pedromanoel3000-bit/pascoa'
         webpush.setVapidDetails(subject, keys.publicKey, keys.privateKey)
         return keys

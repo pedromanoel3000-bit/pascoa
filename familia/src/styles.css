@@ -467,3 +467,8 @@ input.switch:checked::after { transform: translateX(18px); }
 .notif:not(.unread) .notif-text b { font-weight: 600; }
 .notif-body { font-size: .92rem; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .notif-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); flex: none; margin-top: 6px; }
+
+/* ---------- avisos de problema ---------- */
+.card.warn { border-color: color-mix(in srgb, var(--neg) 45%, var(--line)); background: color-mix(in srgb, var(--neg) 7%, var(--card)); display: flex; flex-direction: column; gap: 4px; }
+.card.warn p { margin: 0; }
+.push-banner.lost { border-color: color-mix(in srgb, var(--neg) 45%, var(--line)); background: color-mix(in srgb, var(--neg) 6%, var(--card)); }

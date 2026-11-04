@@ -78,6 +78,8 @@ Sem `SUPABASE_URL` e `SUPABASE_KEY`, o servidor guarda os dados na pasta `data/`
 - Quem está com o app aberto na tela não recebe aviso repetido no celular, mas o aviso fica no histórico (sino 🔔 no topo).
 - O histórico funciona mesmo para quem não ativou as notificações no celular. Mensagens seguidas da mesma conversa viram um item só.
 - As chaves das notificações são criadas sozinhas e guardadas no Supabase (ou em `data/`). Se preferir, defina `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY`.
+- Se a inscrição de um aparelho se perder, o app refaz sozinho quando o navegador deixa. No iPhone, às vezes é preciso um toque em **Reativar**, e o aviso explica isso.
+- Se o app pedir para reativar com frequência, abra **Família**: um aviso no topo diz se o servidor está sem banco de dados (ele esquece as chaves a cada reinício).
 
 ### Lembretes no plano grátis do Render
 
