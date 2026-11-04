@@ -64,8 +64,9 @@ A chave secreta dá acesso total ao banco: coloque-a só no Render, nunca no có
    - **Instance Type:** Free
 3. Em **Environment Variables**, adicione:
    - `SUPABASE_URL` = o Project URL
-   - `SUPABASE_KEY` = a chave secreta
+   - `SUPABASE_KEY` = a chave secreta (também aceita o nome `SUPABASE_SERVICE_ROLE_KEY`)
 4. Clique em **Deploy**. Quando terminar, o endereço `https://….onrender.com` é o app.
+5. Confira abrindo `https://….onrender.com/api/health`: deve aparecer `"storage":"supabase"` e `"db":"ok"`. Se aparecer `"missing"`, falta a variável indicada; a tela **Família** do app mostra o mesmo aviso.
 
 No plano grátis o Render "dorme" depois de 15 minutos sem uso; a primeira abertura depois disso demora cerca de um minuto. Os dados não se perdem, porque ficam no Supabase.
 

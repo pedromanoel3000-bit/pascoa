@@ -67,6 +67,11 @@ export function ServerWarning() {
           Ele esquece tudo sempre que reinicia (no Render grátis, depois de 15 minutos sem uso). Por isso as notificações param e o app pede para ativar de novo.
           Coloque no Render as variáveis SUPABASE_URL e SUPABASE_KEY do seu projeto no Supabase.
         </p>
+        {health.missing?.length > 0 && (
+          <p className="small">
+            <b>Falta no Render:</b> {health.missing.join(' e ')}
+          </p>
+        )}
       </div>
     )
   return null

@@ -14,9 +14,30 @@ const DATA = process.env.DATA_DIR || path.join(ROOT, 'data')
 const PORT = Number(process.env.PORT) || 3001
 const MAX_BODY = 25 * 1024 * 1024
 
-const SB_URL = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
-const SB_KEY = (process.env.SUPABASE_KEY || '').trim()
+// Lê a variável aceitando também os nomes que o próprio Supabase usa, e tira aspas e espaços colados por engano.
+const env = (...names) => {
+  for (const n of names) {
+    const v = (process.env[n] || '').trim().replace(/^["']+|["']+$/g, '').trim()
+    if (v) return v
+  }
+  return ''
+}
+const SB_URL = env('SUPABASE_URL', 'SUPABASE_PROJECT_URL').replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
+const SB_KEY = env('SUPABASE_KEY', 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_KEY')
 const USE_DB = Boolean(SB_URL && SB_KEY)
+const MISSING = [!SB_URL && 'SUPABASE_URL', !SB_KEY && 'SUPABASE_KEY'].filter(Boolean)
+
+// A chave pública (publishable/anon) não serve: o banco bloqueia o acesso e nada é salvo.
+function keyProblem() {
+  if (SB_KEY.startsWith('sb_publishable_')) return 'A SUPABASE_KEY é a chave pública (publishable). Use a chave secreta (sb_secret_…).'
+  if (SB_KEY.startsWith('eyJ')) {
+    try {
+      const role = JSON.parse(Buffer.from(SB_KEY.split('.')[1], 'base64url').toString()).role
+      if (role !== 'service_role') return `A SUPABASE_KEY é a chave "${role}". Use a chave secreta (service_role ou sb_secret_…).`
+    } catch {}
+  }
+  return null
+}
 // Sem Supabase e sem DATA_DIR (disco próprio), os dados ficam numa pasta que o Render grátis apaga ao reiniciar.
 const PERSISTENT = USE_DB || Boolean(process.env.DATA_DIR)
 
@@ -293,7 +314,9 @@ async function handlePush(req, res, action) {
 
 // Diz onde os dados estão sendo guardados e se o banco responde (sem expor chaves).
 async function handleHealth(res) {
-  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file', persistent: PERSISTENT })
+  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file', persistent: PERSISTENT, missing: MISSING })
+  const problem = keyProblem()
+  if (problem) return json(res, 200, { ok: false, storage: 'supabase', db: problem, persistent: true })
   try {
     await sb('families?select=family&limit=1')
     json(res, 200, { ok: true, storage: 'supabase', db: 'ok', persistent: true })
@@ -342,6 +365,7 @@ http
   .listen(PORT, () => {
     console.log(`Nosso Lar rodando em http://localhost:${PORT} — dados ${USE_DB ? 'no Supabase' : 'em ' + DATA}`)
     if (!PERSISTENT)
-      console.warn('ATENÇÃO: sem SUPABASE_URL/SUPABASE_KEY. Os dados e as chaves das notificações se perdem quando o servidor reinicia.')
+      console.warn(`ATENÇÃO: falta ${MISSING.join(' e ')} no ambiente. Os dados e as chaves das notificações se perdem quando o servidor reinicia.`)
+    if (USE_DB && keyProblem()) console.warn('ATENÇÃO: ' + keyProblem())
     notifier.start()
   })
