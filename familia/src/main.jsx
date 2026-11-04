@@ -11,4 +11,8 @@ createRoot(document.getElementById('root')).render(
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
+  // Toque numa notificação com o app já aberto: vai direto para a tela certa.
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type === 'open' && e.data.hash) location.hash = e.data.hash
+  })
 }

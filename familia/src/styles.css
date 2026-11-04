@@ -399,3 +399,16 @@ h2.section-title { font-size: 1rem; color: var(--text); margin-top: 6px; }
 .checklist .swipe-fg { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: var(--card); }
 .task-swipe { border-radius: var(--radius); }
 .task-swipe .card { box-shadow: none; }
+
+/* ---------- notificações ---------- */
+.switch-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; cursor: pointer; }
+input[type='checkbox'].switch { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; flex: none; transition: background .2s; padding: 0; border: 0; cursor: pointer; }
+input.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 25%); transition: transform .2s; }
+input.switch:checked { background: var(--primary); }
+input.switch:checked::after { transform: translateX(18px); }
+.switch:focus { outline: none; }
+.switch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: .92rem; }
+.push-banner { display: flex; gap: 12px; align-items: flex-start; border-color: color-mix(in srgb, var(--primary) 35%, var(--line)); background: color-mix(in srgb, var(--primary) 6%, var(--card)); }
+.push-banner p { margin: 2px 0 8px; }
+.push-bell { font-size: 1.6rem; line-height: 1; }

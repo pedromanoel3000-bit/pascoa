@@ -3,6 +3,7 @@ import { byId, exportBackup, getState, importBackup, remove, resetAll, save, set
 import { AVATARS, COLORS, resizeImage } from '../utils.js'
 import { Avatar, Field, Modal, PageHeader, useMembers } from '../ui.jsx'
 import { toast } from '../toast.jsx'
+import PushSettings from './PushSettings.jsx'
 
 export default function Settings() {
   const st = useStore()
@@ -73,6 +74,8 @@ export default function Settings() {
           Enviar convite
         </button>
       </div>
+
+      <PushSettings />
 
       <h3 className="section-title">Membros</h3>
       {members.map((m) => (

@@ -18,7 +18,8 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 | **Orçamento** | Gastos e entradas por mês, por categoria e por pessoa |
 | **Localização** | Cada um escolhe compartilhar onde está; mapa, rota e check-in |
 | **Notas** | Senha do Wi-Fi, documentos e anexos |
-| **Família** | Convite por código, membros (cor, avatar, aniversário), backup e restauração |
+| **Família** | Convite por código, membros (cor, avatar, aniversário), cor do app, notificações, backup e restauração |
+| **Notificações** | Mensagens, tarefas atribuídas, eventos novos, itens nas listas, recados e lembretes (eventos, aniversários às 8h, tarefas do dia às 9h) |
 
 Os dados ficam salvos no aparelho (funciona sem internet) e sincronizam com o servidor a cada poucos segundos.
 Quem tiver o **código da família** entra nela, então trate o código como uma senha.
@@ -68,6 +69,24 @@ A chave secreta dá acesso total ao banco: coloque-a só no Render, nunca no có
 No plano grátis o Render "dorme" depois de 15 minutos sem uso; a primeira abertura depois disso demora cerca de um minuto. Os dados não se perdem, porque ficam no Supabase.
 
 Sem `SUPABASE_URL` e `SUPABASE_KEY`, o servidor guarda os dados na pasta `data/` (ou em `DATA_DIR`).
+
+## Notificações
+
+- Cada pessoa ativa em **Família → Notificações neste aparelho** (ou no aviso da página inicial) e escolhe o que quer receber.
+- **Android:** funciona no Chrome. **iPhone:** só com o app adicionado à tela de início (Safari → Compartilhar → Adicionar à Tela de Início), iOS 16.4 ou mais novo.
+- Quem está com o app aberto na tela não recebe aviso repetido.
+- As chaves das notificações são criadas sozinhas e guardadas no Supabase (ou em `data/`). Se preferir, defina `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY`.
+
+### Lembretes no plano grátis do Render
+
+O Render grátis "dorme" depois de 15 minutos sem uso, e dormindo ele não envia lembretes de horário.
+Para mantê-lo acordado de graça:
+
+1. Crie uma conta em https://cron-job.org.
+2. Clique em **Create cronjob**, cole o endereço do app com `/api/health` no final (ex.: `https://seu-app.onrender.com/api/health`) e escolha **a cada 10 minutos**.
+3. Salve. Os 750 horas grátis do Render por mês cobrem o mês inteiro ligado.
+
+Avisos de mensagens, tarefas e listas funcionam mesmo sem isso, porque acontecem enquanto alguém está usando o app.
 
 ## Como os dados são guardados
 

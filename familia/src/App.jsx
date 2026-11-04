@@ -4,6 +4,7 @@ import { AVATARS, COLORS } from './utils.js'
 import { Avatar, Field } from './ui.jsx'
 import { Icon } from './icons.jsx'
 import { Toaster } from './toast.jsx'
+import { refreshPush } from './push.js'
 import Home from './pages/Home.jsx'
 import Calendar from './pages/Calendar.jsx'
 import Lists from './pages/Lists.jsx'
@@ -65,6 +66,10 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [page])
+  // Mantém o cadastro de notificações deste aparelho ligado à pessoa certa.
+  useEffect(() => {
+    if (st.family && st.me) refreshPush()
+  }, [st.family, st.me])
 
   if (!st.family) return <Welcome />
   if (!me) return <PickMe />

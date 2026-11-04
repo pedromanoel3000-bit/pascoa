@@ -4,6 +4,7 @@ import { addDays, eventsOn, fmtDate, MONTHS, pad, today, WEEKDAYS, ymd } from '.
 import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
 
 const REPEAT = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' }
+const REMIND = [['none', 'Sem lembrete'], [0, 'Na hora'], [10, '10 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [120, '2 horas antes'], [1440, '1 dia antes']]
 
 export default function Calendar() {
   const st = useStore()
@@ -190,6 +191,15 @@ function EventForm({ initial, onClose }) {
             {Object.entries(REPEAT).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={ev.allDay ? 'Lembrete (dia inteiro: às 8h do dia)' : 'Lembrete'}>
+          <select value={String(ev.remind ?? 30)} onChange={(e) => setEv({ ...ev, remind: e.target.value === 'none' ? 'none' : Number(e.target.value) })}>
+            {REMIND.map(([v, l]) => (
+              <option key={v} value={String(v)}>
+                {l}
               </option>
             ))}
           </select>

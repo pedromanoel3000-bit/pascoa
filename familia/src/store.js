@@ -5,11 +5,13 @@ import { useSyncExternalStore } from 'react'
 const KEY = 'nosso-lar-v1'
 const POLL_MS = 4000
 
-const blank = () => ({ family: null, me: null, rev: 0, items: {}, pending: {}, lastRead: {} })
+const newDevice = () => 'dev-' + Math.random().toString(36).slice(2, 12)
+const blank = () => ({ family: null, me: null, rev: 0, items: {}, pending: {}, lastRead: {}, device: newDevice() })
 
 let state = (() => {
   try {
-    return { ...blank(), ...JSON.parse(localStorage.getItem(KEY)) }
+    const saved = JSON.parse(localStorage.getItem(KEY))
+    return { ...blank(), ...saved, device: saved?.device || newDevice() }
   } catch {
     return blank()
   }
@@ -164,7 +166,7 @@ export async function syncNow() {
     const res = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ family: state.family, since: state.rev, epoch: state.epoch, changes: sent }),
+      body: JSON.stringify({ family: state.family, since: state.rev, epoch: state.epoch, changes: sent, me: state.me, device: document.hidden ? null : state.device }),
     })
     if (!res.ok) throw new Error('HTTP ' + res.status)
     const data = await res.json()

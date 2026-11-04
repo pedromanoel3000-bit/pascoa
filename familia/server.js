@@ -1,11 +1,12 @@
-// Servidor do Nosso Lar: guarda os dados de cada família e serve o app.
-// Sem dependências: só Node 18+.  Uso: npm run serve  (porta 3001 ou $PORT)
+// Servidor do Nosso Lar: guarda os dados de cada família, serve o app e envia as notificações.
+// Uso: npm run serve  (porta 3001 ou $PORT). Precisa de Node 18+.
 // Com SUPABASE_URL e SUPABASE_KEY definidos, os dados vão para o Supabase; senão, para a pasta data/.
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import { createNotifier } from './notify.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(ROOT, 'dist')
@@ -19,16 +20,16 @@ const USE_DB = Boolean(SB_URL && SB_KEY)
 
 if (!USE_DB) fs.mkdirSync(DATA, { recursive: true })
 
-const families = new Map() // código -> dados da família em memória
-const loading = new Map() // código -> carregamento em andamento
+// As famílias são identificadas pelo hash do código (o código funciona como senha e nunca é guardado).
+const families = new Map() // hash -> dados da família em memória
+const loading = new Map() // hash -> carregamento em andamento
 const saveTimers = new Map()
-const dirty = new Map() // código -> Map(id -> item) ainda não gravados no banco
+const dirty = new Map() // hash -> Map(id -> item) ainda não gravados no banco
 
-// O código da família funciona como senha: só o hash dele vai para o disco ou para o banco.
 const keyFor = (code) => crypto.createHash('sha256').update(code).digest('hex').slice(0, 32)
-const fileFor = (code) => path.join(DATA, keyFor(code) + '.json')
+const fileFor = (key) => path.join(DATA, key + '.json')
 
-// ---------- Supabase (API REST, sem dependências) ----------
+// ---------- Supabase (API REST) ----------
 async function sb(pathAndQuery, opts = {}) {
   const headers = { apikey: SB_KEY, 'Content-Type': 'application/json', ...opts.headers }
   if (SB_KEY.startsWith('eyJ')) headers.Authorization = 'Bearer ' + SB_KEY // chaves antigas (JWT)
@@ -38,8 +39,7 @@ async function sb(pathAndQuery, opts = {}) {
   return text ? JSON.parse(text) : null
 }
 
-async function dbLoad(code) {
-  const key = keyFor(code)
+async function dbLoad(key) {
   let rows = await sb(`families?family=eq.${key}&select=epoch`)
   if (!rows.length) {
     await sb('families', {
@@ -62,11 +62,10 @@ async function dbLoad(code) {
   return fam
 }
 
-async function dbFlush(code) {
-  const pending = dirty.get(code)
+async function dbFlush(key) {
+  const pending = dirty.get(key)
   if (!pending || !pending.size) return
-  dirty.delete(code)
-  const key = keyFor(code)
+  dirty.delete(key)
   const rows = [...pending.values()].map((data) => ({ family: key, id: data.id, rev: data.rev, data }))
   // Envia em lotes de até ~4 MB (fotos ocupam bastante).
   let batch = []
@@ -91,57 +90,107 @@ async function dbFlush(code) {
     await send()
   } catch (err) {
     console.error('Falha ao gravar no Supabase, tentando de novo em 5 s:', err.message)
-    const again = dirty.get(code) || new Map()
+    const again = dirty.get(key) || new Map()
     for (const r of rows) if (!again.has(r.id)) again.set(r.id, r.data)
-    dirty.set(code, again)
-    clearTimeout(saveTimers.get(code))
-    saveTimers.set(code, setTimeout(() => dbFlush(code), 5000))
+    dirty.set(key, again)
+    clearTimeout(saveTimers.get(key))
+    saveTimers.set(key, setTimeout(() => dbFlush(key), 5000))
   }
 }
 
 // ---------- arquivo local (quando não há Supabase) ----------
-function fileLoad(code) {
+function fileLoad(key) {
   // epoch muda quando o arquivo some (ex.: servidor reiniciado sem disco); o app então reenvia tudo.
   let fam = { rev: 0, items: {}, epoch: crypto.randomUUID() }
   try {
-    fam = JSON.parse(fs.readFileSync(fileFor(code), 'utf8'))
+    fam = JSON.parse(fs.readFileSync(fileFor(key), 'utf8'))
     if (!fam.epoch) fam.epoch = crypto.randomUUID()
   } catch {}
   return fam
 }
 
-function fileSave(code) {
-  const file = fileFor(code)
-  fs.writeFileSync(file + '.tmp', JSON.stringify(families.get(code)))
+function fileSave(key) {
+  const file = fileFor(key)
+  fs.writeFileSync(file + '.tmp', JSON.stringify(families.get(key)))
   fs.renameSync(file + '.tmp', file)
 }
 
 // ---------- comum ----------
-async function loadFamily(code) {
-  if (families.has(code)) return families.get(code)
-  if (!loading.has(code)) {
-    const p = (USE_DB ? dbLoad(code) : Promise.resolve(fileLoad(code)))
+async function loadFamily(key) {
+  if (families.has(key)) return families.get(key)
+  if (!loading.has(key)) {
+    const p = (USE_DB ? dbLoad(key) : Promise.resolve(fileLoad(key)))
       .then((fam) => {
-        families.set(code, fam)
-        if (!USE_DB && !fs.existsSync(fileFor(code))) fileSave(code)
+        families.set(key, fam)
+        if (!USE_DB && !fs.existsSync(fileFor(key))) fileSave(key)
         return fam
       })
-      .finally(() => loading.delete(code))
-    loading.set(code, p)
+      .finally(() => loading.delete(key))
+    loading.set(key, p)
   }
-  return loading.get(code)
+  return loading.get(key)
 }
 
-function saveFamily(code, changedItems) {
+function saveFamily(key, changedItems) {
   if (USE_DB) {
-    const d = dirty.get(code) || new Map()
+    const d = dirty.get(key) || new Map()
     for (const it of changedItems) d.set(it.id, it)
-    dirty.set(code, d)
+    dirty.set(key, d)
   }
-  clearTimeout(saveTimers.get(code))
-  saveTimers.set(code, setTimeout(() => (USE_DB ? dbFlush(code) : fileSave(code)), 300))
+  clearTimeout(saveTimers.get(key))
+  saveTimers.set(key, setTimeout(() => (USE_DB ? dbFlush(key) : fileSave(key)), 300))
 }
 
+// Grava um item novo/alterado vindo do próprio servidor (ex.: cadastro de notificação).
+function putItem(key, fam, item) {
+  fam.rev += 1
+  fam.items[item.id] = { ...item, updatedAt: Date.now(), rev: fam.rev }
+  saveFamily(key, [fam.items[item.id]])
+  return fam.items[item.id]
+}
+
+// Configurações do servidor (ex.: chaves das notificações). Ficam numa linha especial da tabela families.
+async function getConfig(name) {
+  if (USE_DB) {
+    const rows = await sb(`families?family=eq.__cfg_${name}&select=epoch`)
+    return rows.length ? JSON.parse(rows[0].epoch) : null
+  }
+  try {
+    return JSON.parse(fs.readFileSync(path.join(DATA, `__cfg_${name}.json`), 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+async function setConfig(name, value) {
+  if (USE_DB) {
+    await sb('families', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+      body: JSON.stringify([{ family: `__cfg_${name}`, epoch: JSON.stringify(value) }]),
+    })
+    return getConfig(name) // se outra instância gravou antes, vale a dela
+  }
+  fs.writeFileSync(path.join(DATA, `__cfg_${name}.json`), JSON.stringify(value))
+  return value
+}
+
+// Famílias que têm algum aparelho cadastrado para notificações (para os lembretes funcionarem após reiniciar).
+async function familiesWithPush() {
+  if (USE_DB) {
+    const rows = await sb('items?select=family&data->>type=eq.pushsub&limit=10000')
+    return [...new Set(rows.map((r) => r.family))]
+  }
+  return fs
+    .readdirSync(DATA)
+    .filter((f) => f.endsWith('.json') && !f.startsWith('__'))
+    .map((f) => f.slice(0, -5))
+    .filter((key) => Object.values(fileLoad(key).items).some((i) => i.type === 'pushsub' && !i.deleted))
+}
+
+const notifier = createNotifier({ families, loadFamily, putItem, getConfig, setConfig, familiesWithPush })
+
+// ---------- HTTP ----------
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let size = 0
@@ -163,39 +212,81 @@ function json(res, status, body) {
   res.end(JSON.stringify(body))
 }
 
-// Sincronização: o app manda o que mudou e recebe tudo que mudou desde a última revisão que viu.
-// Conflito: vence a alteração mais recente (updatedAt).
-async function handleSync(req, res) {
+// Lê o corpo, valida o código da família e carrega os dados dela.
+async function openFamily(req, res) {
   let body
   try {
     body = JSON.parse(await readBody(req))
   } catch {
-    return json(res, 400, { error: 'invalid body' })
+    json(res, 400, { error: 'invalid body' })
+    return null
   }
   const code = String(body.family || '').trim().toUpperCase()
-  if (!/^[A-Z0-9-]{6,40}$/.test(code)) return json(res, 400, { error: 'invalid family code' })
-  let fam
+  if (!/^[A-Z0-9-]{6,40}$/.test(code)) {
+    json(res, 400, { error: 'invalid family code' })
+    return null
+  }
+  const key = keyFor(code)
   try {
-    fam = await loadFamily(code)
+    return { body, key, fam: await loadFamily(key) }
   } catch (err) {
     console.error('Falha ao carregar a família:', err.message)
-    return json(res, 503, { error: 'storage unavailable' })
+    json(res, 503, { error: 'storage unavailable' })
+    return null
   }
+}
+
+// Itens só do servidor (cadastros de notificação) não vão para os aparelhos.
+const PRIVATE_TYPES = new Set(['pushsub'])
+
+// Sincronização: o app manda o que mudou e recebe tudo que mudou desde a última revisão que viu.
+// Conflito: vence a alteração mais recente (updatedAt).
+async function handleSync(req, res) {
+  const ctx = await openFamily(req, res)
+  if (!ctx) return
+  const { body, key, fam } = ctx
+  notifier.seen(key, body.device)
   const changes = Array.isArray(body.changes) ? body.changes : []
   const changed = []
+  const events = []
   for (const c of changes) {
-    if (!c || typeof c.id !== 'string' || typeof c.type !== 'string') continue
+    if (!c || typeof c.id !== 'string' || typeof c.type !== 'string' || PRIVATE_TYPES.has(c.type)) continue
     const cur = fam.items[c.id]
     if (!cur || (c.updatedAt || 0) >= (cur.updatedAt || 0)) {
       fam.rev += 1
       fam.items[c.id] = { ...c, rev: fam.rev }
       changed.push(fam.items[c.id])
+      events.push([cur, fam.items[c.id]])
     }
   }
-  if (changed.length) saveFamily(code, changed)
+  if (changed.length) saveFamily(key, changed)
   const since = body.epoch === fam.epoch ? Number(body.since) || 0 : 0
-  const items = Object.values(fam.items).filter((i) => i.rev > since)
+  const items = Object.values(fam.items).filter((i) => i.rev > since && !PRIVATE_TYPES.has(i.type))
   json(res, 200, { rev: fam.rev, epoch: fam.epoch, items })
+  // Avisa a família depois de responder, para não atrasar a sincronização.
+  if (events.length && body.me) notifier.onChanges(key, fam, body.me, body.device, events)
+}
+
+async function handlePush(req, res, action) {
+  if (action === 'key') {
+    try {
+      return json(res, 200, { key: await notifier.publicKey() })
+    } catch (err) {
+      console.error('Falha ao preparar as notificações:', err.message)
+      return json(res, 503, { error: 'push unavailable' })
+    }
+  }
+  const ctx = await openFamily(req, res)
+  if (!ctx) return
+  const { body, key, fam } = ctx
+  try {
+    if (action === 'subscribe') return json(res, 200, await notifier.subscribe(key, fam, body))
+    if (action === 'unsubscribe') return json(res, 200, notifier.unsubscribe(key, fam, body))
+    if (action === 'test') return json(res, 200, await notifier.test(key, fam, body))
+  } catch (err) {
+    return json(res, 400, { error: err.message })
+  }
+  json(res, 404, { error: 'not found' })
 }
 
 // Diz onde os dados estão sendo guardados e se o banco responde (sem expor chaves).
@@ -239,9 +330,14 @@ function serveStatic(req, res) {
 
 http
   .createServer((req, res) => {
-    if (req.url.startsWith('/api/sync') && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
-    if (req.url.startsWith('/api/health')) return handleHealth(res)
+    const url = req.url.split('?')[0]
+    if (url === '/api/sync' && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
+    if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
+    if (url === '/api/health') return handleHealth(res)
     if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res)
     json(res, 404, { error: 'not found' })
   })
-  .listen(PORT, () => console.log(`Nosso Lar rodando em http://localhost:${PORT} — dados ${USE_DB ? 'no Supabase' : 'em ' + DATA}`))
+  .listen(PORT, () => {
+    console.log(`Nosso Lar rodando em http://localhost:${PORT} — dados ${USE_DB ? 'no Supabase' : 'em ' + DATA}`)
+    notifier.start()
+  })

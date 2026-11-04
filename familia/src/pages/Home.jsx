@@ -4,6 +4,7 @@ import { addDays, eventsOn, fmtDate, parseYmd, resizeImage, timeAgo, today, WEEK
 import { Avatar, Empty, useMembers } from '../ui.jsx'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
+import { PushBanner } from './PushSettings.jsx'
 
 const QUICK = [
   ['#calendar/new', 'calendar', 'Evento', '#3e63dd'],
@@ -65,6 +66,8 @@ export default function Home() {
           })}
         </div>
       </section>
+
+      <PushBanner />
 
       <div className="quick">
         {QUICK.map(([href, ic, label, tint]) => (
