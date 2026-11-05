@@ -571,3 +571,18 @@ input.tr-in { text-align: center; font-weight: 700; padding: 10px 4px; min-width
 .tr-plano-t summary { cursor: pointer; }
 .tr-plano-t ol { padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
 .tr-plano-t ol p { margin: 2px 0 0; color: var(--muted); }
+
+.tr-planos { display: flex; flex-direction: column; gap: 8px; }
+.tr-plano-op { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.tr-plano-op.on { border-color: var(--primary); background: var(--primary-soft); }
+.tr-plano-op span { display: flex; flex-direction: column; gap: 2px; }
+.tr-leve { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.tr-leve span { display: flex; flex-direction: column; gap: 2px; }
+.tr-leve.on { border-color: color-mix(in srgb, var(--primary) 50%, var(--line)); background: var(--primary-soft); }
+.tr-cardio-sem { display: flex; flex-direction: column; gap: 8px; }
+.tr-cardio-sem p { margin: 0; }
+.tr-cardio-sem.completo { border-color: color-mix(in srgb, var(--pos) 55%, var(--line)); }
+.tr-cardio-sem.completo .tr-timer-bar i { background: var(--pos); }
+.tr-cardio-form { display: grid; grid-template-columns: 1fr 76px auto; gap: 8px; }
+.tr-cardio-form select { width: auto; }
+.tr-carga span:last-child { display: inline-flex; align-items: center; gap: 4px; }

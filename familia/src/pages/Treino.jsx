@@ -12,7 +12,7 @@ import * as T from '../treino.js'
 
 const progId = (me) => `treino-programa-${me}`
 const rascId = (me) => `treino-rascunho-${me}`
-const minhasSessoes = (st) => T.ordenar(list(st, 'treinoSessao').filter((s) => s.memberId === st.me))
+const minhasSessoes = (st, plano) => T.ordenar(list(st, 'treinoSessao').filter((s) => s.memberId === st.me && T.planoDaSessao(s) === plano.id))
 
 async function copiar(texto) {
   try {
@@ -153,6 +153,7 @@ function TreinoDe() {
   const programa = byId(st, progId(st.me))
   const [aba, setAba] = useState('treinar')
   if (!programa) return <Ativar />
+  const plano = T.planoDe(programa)
   return (
     <div className="page treino">
       <PageHeader title="Treino">
@@ -166,9 +167,9 @@ function TreinoDe() {
           onChange={setAba}
         />
       </PageHeader>
-      {aba === 'treinar' && <Sessao programa={programa} />}
-      {aba === 'historico' && <Historico programa={programa} />}
-      {aba === 'plano' && <Plano programa={programa} />}
+      {aba === 'treinar' && <Sessao programa={programa} plano={plano} />}
+      {aba === 'historico' && <Historico programa={programa} plano={plano} />}
+      {aba === 'plano' && <Plano programa={programa} plano={plano} />}
     </div>
   )
 }
@@ -177,32 +178,54 @@ function Ativar() {
   const st = useStore()
   const [inicio, setInicio] = useState(today())
   const [barra, setBarra] = useState(T.fmtKg(T.BARRA_PADRAO))
+  const [planoId, setPlanoId] = useState(T.PLANO_PADRAO.id)
+  const [proteina, setProteina] = useState('')
+  const plano = T.PLANOS[planoId]
   const ativar = (e) => {
     e.preventDefault()
-    save('treinoPrograma', { id: progId(st.me), memberId: st.me, inicio, proximo: 'A', barra: T.lerKg(barra) ?? T.BARRA_PADRAO })
+    save('treinoPrograma', { id: progId(st.me), memberId: st.me, plano: planoId, inicio, proximo: 'A', barra: T.lerKg(barra) ?? T.BARRA_PADRAO, proteina: T.lerReps(proteina) })
     toast('Programa ativado 💪')
   }
   return (
     <div className="page treino">
       <PageHeader title="Treino" />
       <section className="card stack">
-        <h3>💪 Programa de {T.BLOCO} semanas</h3>
+        <h3>💪 Programa de {plano.bloco} semanas</h3>
         <p className="muted small">
           Quatro treinos em fila: A → B → C → D → A. Faltou um dia, faz o próximo. As semanas contam a partir da data de início e mudam as séries, o esforço (RIR) e o cardio.
         </p>
         <form className="form" onSubmit={ativar}>
+          <div className="field">
+            <span>Plano</span>
+            <div className="tr-planos">
+              {Object.values(T.PLANOS).map((p) => (
+                <label key={p.id} className={'tr-plano-op' + (p.id === planoId ? ' on' : '')}>
+                  <input type="radio" name="plano" checked={p.id === planoId} onChange={() => setPlanoId(p.id)} />
+                  <span>
+                    <b>{p.nome}</b>
+                    <small className="muted">{p.descricao}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
           <Field label="Data de início do programa">
             <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
           </Field>
           <Field label="Peso da barra da sua academia (kg)">
             <input inputMode="decimal" value={barra} onChange={(e) => setBarra(e.target.value)} />
           </Field>
+          {plano.cardioSemanal && (
+            <Field label="Meta de proteína por dia, em gramas (opcional)">
+              <input inputMode="numeric" value={proteina} onChange={(e) => setProteina(e.target.value)} placeholder="ex.: 1,6 a 2 g por kg do peso-meta" />
+            </Field>
+          )}
           <button className="btn primary big">Ativar programa</button>
         </form>
       </section>
       <section className="card">
         <h3>Os treinos</h3>
-        <ResumoTreinos barra={T.lerKg(barra) ?? T.BARRA_PADRAO} />
+        <ResumoTreinos plano={plano} barra={T.lerKg(barra) ?? T.BARRA_PADRAO} />
       </section>
     </div>
   )
@@ -250,10 +273,10 @@ function metaTexto(meta, e, info, n, barra) {
   return t
 }
 
-function Sessao({ programa }) {
+function Sessao({ programa, plano }) {
   const st = useStore()
   const me = st.me
-  const sessoes = minhasSessoes(st)
+  const sessoes = minhasSessoes(st, plano)
   const [d, setD] = useState(() => {
     const r = byId(st, rascId(me))
     if (!r) return novoRascunho(me, programa.proximo)
@@ -299,10 +322,10 @@ function Sessao({ programa }) {
   }, [])
 
   const semana = T.semanaDe(programa.inicio, d.data)
-  const info = T.semanaInfo(semana)
-  const tr = T.TREINOS[d.treino]
+  const info = T.semanaInfo(semana, plano)
+  const tr = plano.treinos[d.treino]
   const barra = programa.barra ?? T.BARRA_PADRAO
-  const metas = Object.fromEntries(tr.exercicios.map((e) => [e.id, T.metaAtual(e, d.treino, sessoes, barra)]))
+  const metas = Object.fromEntries(tr.exercicios.map((e) => [e.id, T.metaAtual(e, d.treino, sessoes, barra, plano)]))
 
   const seriesDe = (e, r = d) => {
     const arr = r.exercicios?.[e.id]?.series || []
@@ -370,13 +393,16 @@ function Sessao({ programa }) {
         .filter((s) => s.reps && (e.corpo || s.kg != null))
       if (!feitas.length) return
       const ant = T.anteriorDe(sessoes, d.treino, e.id)
-      exercicios.push({ id: e.id, nome: e.nome, faixa: `${e.min}–${e.max}`, series: feitas, proxima: T.calcProxima(e, feitas, info, ant?.series, barra) })
+      // Dia de pouca energia: a meta da próxima vez continua a mesma de hoje.
+      const meta = metas[e.id]
+      const proxima = d.diaLeve && meta && !['achar', 'outro'].includes(meta.acao) ? meta : T.calcProxima(e, feitas, info, ant?.series, barra)
+      exercicios.push({ id: e.id, nome: e.nome, faixa: `${e.min}–${e.max}`, series: feitas, proxima })
     })
     if (!exercicios.length) return toast('Marque pelo menos uma série com ✓ antes de concluir')
     if (faltando && !confirm(`${faltando === 1 ? '1 série ficou' : `${faltando} séries ficaram`} sem ✓ e fica${faltando === 1 ? '' : 'm'} fora do registro. Concluir mesmo assim?`)) return
     const cardio = tr.cardio && d.cardioFeito ? T.lerReps(d.cardio) || T.lerReps(info.cardio) : null
-    const sessao = { memberId: me, treino: d.treino, data: d.data, semana, fase: info.fase, exercicios, cardio }
-    sessao.registro = T.formatarRegistro(sessao)
+    const sessao = { memberId: me, plano: plano.id, treino: d.treino, data: d.data, semana, fase: info.fase, exercicios, cardio, diaLeve: !!(plano.diaLeve && d.diaLeve) }
+    sessao.registro = T.formatarRegistro(sessao, plano)
     const salva = save('treinoSessao', sessao)
     update(programa.id, { proximo: T.proximaLetra(d.treino) })
     remove(rascId(me))
@@ -397,7 +423,7 @@ function Sessao({ programa }) {
         <div className="tr-top-row">
           <b className="tr-sem">
             Semana {semana}
-            {semana <= T.BLOCO ? ` de ${T.BLOCO}` : ''}
+            {semana <= plano.bloco ? ` de ${plano.bloco}` : ''}
           </b>
           <span className="muted"> · {info.fase}</span>
           <span className="grow" />
@@ -415,7 +441,7 @@ function Sessao({ programa }) {
           {T.LETRAS.map((l) => (
             <button key={l} type="button" className={'tr-fila-b' + (l === d.treino ? ' on' : '')} aria-pressed={l === d.treino} onClick={() => trocar(l)}>
               <b>{l}</b>
-              <small>{l === programa.proximo ? 'próximo' : T.TREINOS[l].nome}</small>
+              <small>{l === programa.proximo ? 'próximo' : plano.treinos[l].nome}</small>
             </button>
           ))}
         </div>
@@ -426,8 +452,8 @@ function Sessao({ programa }) {
 
       {info.fim && (
         <div className="card warn">
-          <b>Fim do bloco de {T.BLOCO} semanas</b>
-          <p className="small">Peça ao Claude o próximo bloco. Até lá, os treinos seguem como na semana 3 (3 séries, RIR 3).</p>
+          <b>Fim do bloco de {plano.bloco} semanas</b>
+          <p className="small">Peça ao Claude o próximo bloco. {plano.fimTxt}</p>
         </div>
       )}
       {velho && (
@@ -461,6 +487,16 @@ function Sessao({ programa }) {
           </label>
         ))}
       </section>
+
+      {plano.diaLeve && (
+        <label className={'card check tr-leve' + (d.diaLeve ? ' on' : '')}>
+          <input type="checkbox" checked={!!d.diaLeve} onChange={() => mudar((cur) => ({ ...cur, diaLeve: !cur.diaLeve }))} />
+          <span>
+            <b>Dia de pouca energia</b>
+            <small className="muted">Ex.: menstruação. Use a carga que der para cumprir o RIR; a meta da próxima vez não muda.</small>
+          </span>
+        </label>
+      )}
 
       {tr.exercicios.map((e, idx) => {
         const series = seriesDe(e)
@@ -508,6 +544,8 @@ function Sessao({ programa }) {
         </section>
       )}
 
+      {plano.cardioSemanal && <CardioSemana programa={programa} plano={plano} sessoes={sessoes} />}
+
       <button className="btn primary big" onClick={concluir}>
         Concluir treino {d.treino}
       </button>
@@ -554,7 +592,7 @@ function Exercicio({ e, n, series, info, barra, meta, kgPh, repsPh, onCampo, onM
           <h3>{e.nome}</h3>
           <div className="muted small">
             {series.length}×{e.min}–{e.max}
-            {e.porPerna ? ' por perna' : ''} · descanso {T.mmss(e.desc)} · {T.incTxt(e)}
+            {e.porPerna ? ` por ${e.lado}` : ''} · descanso {T.mmss(e.desc)} · {T.incTxt(e)}
           </div>
         </div>
         <span className="tr-count">
@@ -570,7 +608,7 @@ function Exercicio({ e, n, series, info, barra, meta, kgPh, repsPh, onCampo, onM
       <div className="tr-sets">
         <div className="muted small">
           {unidade}
-          {e.porPerna ? ' · repetições por perna' : ''}
+          {e.porPerna ? ` · repetições por ${e.lado}` : ''}
         </div>
         {series.map((s, i) => {
           const aviso = s.feito ? T.avaliarRir(e, s.rir, info) : null
@@ -616,9 +654,9 @@ function Exercicio({ e, n, series, info, barra, meta, kgPh, repsPh, onCampo, onM
 }
 
 // ---------- histórico ----------
-function Historico({ programa }) {
+function Historico({ programa, plano }) {
   const st = useStore()
-  const sessoes = minhasSessoes(st)
+  const sessoes = minhasSessoes(st, plano)
   const barra = programa.barra ?? T.BARRA_PADRAO
   const [aberta, setAberta] = useState(null)
   const [importando, setImportando] = useState(false)
@@ -641,11 +679,11 @@ function Historico({ programa }) {
         return (
           <section key={l} className="card tr-cargas">
             <h3>
-              Treino {l} · {T.TREINOS[l].nome}
+              Treino {l} · {plano.treinos[l].nome}
               <small className="muted"> · {ultima ? `último em ${T.dataBR(ultima.data)}` : 'ainda não feito'}</small>
             </h3>
-            {T.TREINOS[l].exercicios.map((e) => {
-              const m = T.metaAtual(e, l, sessoes, barra)
+            {plano.treinos[l].exercicios.map((e) => {
+              const m = T.metaAtual(e, l, sessoes, barra, plano)
               return (
                 <div key={e.id} className="tr-carga">
                   <span>{e.nome}</span>
@@ -660,7 +698,7 @@ function Historico({ programa }) {
       <h3 className="section-title">Sessões ({sessoes.length})</h3>
       {sessoes.length === 0 && <Empty icon="🏋️" text="Nenhum treino concluído ainda. Termine o primeiro ou importe um registro." />}
       {sessoes.map((s) => {
-        const texto = s.registro || T.formatarRegistro(s)
+        const texto = s.registro || T.formatarRegistro(s, plano)
         const open = aberta === s.id
         return (
           <section key={s.id} className="card tr-sessao">
@@ -693,20 +731,20 @@ function Historico({ programa }) {
           </section>
         )
       })}
-      {importando && <Importar programa={programa} sessoes={sessoes} onClose={() => setImportando(false)} />}
+      {importando && <Importar programa={programa} plano={plano} sessoes={sessoes} onClose={() => setImportando(false)} />}
     </>
   )
 }
 
 // Cola um ou mais registros ("REGISTRO DE TREINO (...)") e transforma em sessões de quem está usando.
-function Importar({ programa, sessoes, onClose }) {
+function Importar({ programa, plano, sessoes, onClose }) {
   const st = useStore()
   const [texto, setTexto] = useState('')
   const [avisos, setAvisos] = useState([])
   const barra = programa.barra ?? T.BARRA_PADRAO
 
   const importar = () => {
-    const { sessoes: lidas, avisos: av } = T.lerRegistros(texto)
+    const { sessoes: lidas, avisos: av } = T.lerRegistros(texto, plano)
     setAvisos(av)
     if (!lidas.length) return
     const todas = [...sessoes]
@@ -718,13 +756,13 @@ function Importar({ programa, sessoes, onClose }) {
         continue
       }
       const semana = l.semana || T.semanaDe(programa.inicio, l.data)
-      const info = T.semanaInfo(semana)
+      const info = T.semanaInfo(semana, plano)
       const exercicios = l.exercicios.map(({ def, proximaTxt, ...e }) => {
         let proxima = proximaTxt ? T.lerProxima(proximaTxt, e.series) : null
         if (!proxima && def) proxima = T.calcProxima(def, e.series, info, T.anteriorDe(todas, l.treino, e.id, l.data)?.series, barra)
         return { ...e, proxima }
       })
-      const salva = save('treinoSessao', { memberId: st.me, treino: l.treino, data: l.data, semana, fase: info.fase, exercicios, cardio: l.cardio, registro: l.registro, importado: true })
+      const salva = save('treinoSessao', { memberId: st.me, plano: plano.id, treino: l.treino, data: l.data, semana, fase: info.fase, exercicios, cardio: l.cardio, diaLeve: l.diaLeve, registro: l.registro, importado: true })
       todas.push(salva)
       novas.push(salva)
     }
@@ -759,10 +797,83 @@ function Importar({ programa, sessoes, onClose }) {
   )
 }
 
+// ---------- cardio da semana (planos com meta semanal) ----------
+const TIPOS_CARDIO = ['Corrida', 'Caminhada', 'Esteira', 'Bike', 'Escada', 'Elíptico', 'Outro']
+
+function CardioSemana({ programa, plano, sessoes }) {
+  const st = useStore()
+  const [aberto, setAberto] = useState(false)
+  const [min, setMin] = useState('')
+  const [tipo, setTipo] = useState('Corrida')
+  const n = T.semanaDe(programa.inicio, today())
+  const [de, ate] = T.datasDaSemana(programa.inicio, n)
+  const meta = T.semanaInfo(n, plano).cardioSemana || 0
+  const naSemana = (data) => data >= de && data <= ate
+  const avulsos = list(st, 'treinoCardio')
+    .filter((c) => c.memberId === st.me && naSemana(c.data))
+    .sort((a, b) => a.data.localeCompare(b.data))
+  const doTreino = sessoes.filter((s) => naSemana(s.data)).reduce((t, s) => t + (s.cardio || 0), 0)
+  const total = doTreino + avulsos.reduce((t, c) => t + (c.minutos || 0), 0)
+  const registrar = (e) => {
+    e.preventDefault()
+    const minutos = T.lerReps(min)
+    if (!minutos) return toast('Coloque os minutos')
+    save('treinoCardio', { memberId: st.me, data: today(), minutos, tipo })
+    setMin('')
+    setAberto(false)
+    toast(`${tipo}: ${minutos} min registrados`)
+  }
+  return (
+    <section className={'card tr-cardio-sem' + (total >= meta ? ' completo' : '')}>
+      <div className="tr-top-row">
+        <h3>Cardio da semana</h3>
+        <span className="grow" />
+        <b>
+          {total} de {meta} min
+        </b>
+      </div>
+      <div className="tr-timer-bar">
+        <i style={{ width: `${Math.min(100, meta ? (total / meta) * 100 : 0)}%` }} />
+      </div>
+      <p className="muted small">
+        Moderado: dá para falar frases curtas, mas não cantar. Conta o cardio dos treinos e o que você registrar aqui ({T.dataBR(de).slice(0, 5)} a {T.dataBR(ate).slice(0, 5)}). O jiu-jitsu não entra.
+      </p>
+      {avulsos.map((c) => (
+        <div key={c.id} className="tr-carga">
+          <span>
+            {T.dataBR(c.data).slice(0, 5)} · {c.tipo}
+          </span>
+          <span>
+            <b>{c.minutos} min</b>{' '}
+            <button type="button" className="icon-btn small" onClick={() => remove(c.id)} aria-label={`Apagar ${c.tipo} de ${T.dataBR(c.data)}`}>
+              ✕
+            </button>
+          </span>
+        </div>
+      ))}
+      {aberto ? (
+        <form className="tr-cardio-form" onSubmit={registrar}>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo de cardio">
+            {TIPOS_CARDIO.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+          <input className="tr-in" inputMode="numeric" value={min} onChange={(e) => setMin(e.target.value)} placeholder="min" aria-label="Minutos" autoFocus />
+          <button className="btn primary">Salvar</button>
+        </form>
+      ) : (
+        <button type="button" className="btn ghost small" onClick={() => setAberto(true)}>
+          + Registrar cardio (corrida, bike…)
+        </button>
+      )}
+    </section>
+  )
+}
+
 // ---------- plano ----------
-function ResumoTreinos({ barra }) {
+function ResumoTreinos({ plano, barra }) {
   return T.LETRAS.map((l) => {
-    const t = T.TREINOS[l]
+    const t = plano.treinos[l]
     return (
       <details key={l} className="tr-plano-t">
         <summary>
@@ -774,7 +885,7 @@ function ResumoTreinos({ barra }) {
               <b>{e.nome}</b>{' '}
               <span className="muted small">
                 {e.series}×{e.min}–{e.max}
-                {e.porPerna ? ' por perna' : ''} · descanso {T.mmss(e.desc)} · {T.incTxt(e)}
+                {e.porPerna ? ` por ${e.lado}` : ''} · descanso {T.mmss(e.desc)} · {T.incTxt(e)}
                 {e.semFalha ? ' · nunca até a falha' : ''}
               </span>
               <p className="small">{e.dica}</p>
@@ -787,15 +898,30 @@ function ResumoTreinos({ barra }) {
   })
 }
 
-function Plano({ programa }) {
+function Plano({ programa, plano }) {
   const barra = programa.barra ?? T.BARRA_PADRAO
   const [barraTxt, setBarraTxt] = useState(T.fmtKg(barra))
+  const [proteinaTxt, setProteinaTxt] = useState(programa.proteina ? String(programa.proteina) : '')
   const hoje = T.semanaDe(programa.inicio, today())
   const curta = (s) => T.dataBR(s).slice(0, 5)
+  const trocarPlano = (id) => {
+    if (id === plano.id) return
+    if (!confirm(`Trocar para o plano “${T.PLANOS[id].nome}”? A fila volta para o treino A. O histórico do plano atual continua guardado.`)) return
+    update(programa.id, { plano: id, proximo: 'A' })
+  }
   return (
     <>
       <section className="card form">
         <h3>Seu programa</h3>
+        <Field label="Plano">
+          <select value={plano.id} onChange={(e) => trocarPlano(e.target.value)}>
+            {Object.values(T.PLANOS).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Data de início">
           <input type="date" value={programa.inicio} onChange={(e) => e.target.value && update(programa.id, { inicio: e.target.value })} />
         </Field>
@@ -810,14 +936,25 @@ function Plano({ programa }) {
             }}
           />
         </Field>
+        {plano.cardioSemanal && (
+          <Field label="Meta de proteína por dia (g)">
+            <input
+              inputMode="numeric"
+              value={proteinaTxt}
+              placeholder="ex.: 1,6 a 2 g por kg do peso-meta"
+              onChange={(e) => setProteinaTxt(e.target.value)}
+              onBlur={() => update(programa.id, { proteina: T.lerReps(proteinaTxt) })}
+            />
+          </Field>
+        )}
         <p className="muted small">Fila A → B → C → D → A: faltou um dia, faz o próximo. Agora é a vez do treino {programa.proximo}.</p>
       </section>
 
       <section className="card">
         <h3>Cronograma</h3>
         <div className="tr-crono">
-          {Array.from({ length: T.BLOCO }, (_, k) => k + 1).map((n) => {
-            const i = T.semanaInfo(n)
+          {Array.from({ length: plano.bloco }, (_, k) => k + 1).map((n) => {
+            const i = T.semanaInfo(n, plano)
             const [a, b] = T.datasDaSemana(programa.inicio, n)
             return (
               <div key={n} className={'tr-crono-row' + (n === hoje ? ' on' : '')}>
@@ -826,15 +963,15 @@ function Plano({ programa }) {
                   {curta(a)} a {curta(b)}
                 </span>
                 <span className="small">
-                  {i.fase} · {i.seriesTxt} · RIR {i.rir} · cardio {i.cardio}
+                  {i.fase} · {i.seriesTxt} · RIR {i.rir} · {i.cardioSemana ? `cardio ${i.cardioSemana} min na semana` : `cardio ${i.cardio}`}
                   {i.deload ? ' · mesma carga ou 10% menos' : ''}
                 </span>
               </div>
             )
           })}
-          <div className={'tr-crono-row' + (hoje > T.BLOCO ? ' on' : '')}>
+          <div className={'tr-crono-row' + (hoje > plano.bloco ? ' on' : '')}>
             <b>Depois</b>
-            <span className="muted small">a partir de {curta(T.datasDaSemana(programa.inicio, T.BLOCO + 1)[0])}</span>
+            <span className="muted small">a partir de {curta(T.datasDaSemana(programa.inicio, plano.bloco + 1)[0])}</span>
             <span className="small">Fim do bloco: peça ao Claude o próximo.</span>
           </div>
         </div>
@@ -843,11 +980,9 @@ function Plano({ programa }) {
       <section className="card tr-regras">
         <h3>Regras</h3>
         <ul>
-          <li>Semanas 1–2 (retomada): no máximo 2 séries por exercício, RIR 3–4, cardio 20 min.</li>
-          <li>Semana 3: 3 séries, RIR 3. Semanas 4–5: RIR 2. Semanas 6–7: RIR 1. Cardio 20–30 min.</li>
-          <li>Semana 8 (deload): metade das séries (arredonda para cima), RIR 3–4, mesma carga ou 10% menos.</li>
-          <li>RIR = repetições que sobraram. Fora da janela da semana, o app avisa: “Pesado: baixe 5–10%” ou “Leve: suba a carga”. No deload, só avisa se estiver pesado.</li>
-          <li>Agachamento livre e stiff: nunca até a falha.</li>
+          {plano.regras.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
           <li>Meta da próxima vez, pela carga da última série: 2 ou mais séries no topo da faixa, sem RIR abaixo da janela → sobe o incremento e volta ao começo da faixa. No topo, mas pesado → repete a carga. Dentro da faixa → mesma carga e +1 repetição na série mais baixa. Abaixo do mínimo → mesma carga; se acontecer de novo, 10% a menos.</li>
           <li>Carga de barra = total, contando a barra. Halter = cada halter.</li>
         </ul>
@@ -855,22 +990,35 @@ function Plano({ programa }) {
 
       <section className="card">
         <h3>Os treinos</h3>
-        <ResumoTreinos barra={barra} />
+        <ResumoTreinos plano={plano} barra={barra} />
       </section>
+
+      {plano.cardio && (
+        <section className="card tr-regras">
+          <h3>Cardio</h3>
+          <ul>
+            {plano.cardio.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card tr-regras">
         <h3>Alimentação</h3>
         <ul>
-          <li>Cerca de 160 g de proteína por dia, divididos nas refeições.</li>
-          <li>Perder de 0,4 a 0,8 kg por semana. Pese-se nas mesmas condições e olhe a média da semana.</li>
+          {plano.alimentacao(programa).map((r) => (
+            <li key={r}>{r}</li>
+          ))}
         </ul>
       </section>
 
       <section className="card warn tr-regras">
         <h3>Dor: quando parar</h3>
         <ul>
-          <li>Pontada, dor na articulação ou formigamento: pare a série e troque o exercício.</li>
-          <li>Dor no peito, falta de ar ou tontura forte: pare o treino e ligue 192.</li>
+          {plano.dor.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
         </ul>
       </section>
     </>
