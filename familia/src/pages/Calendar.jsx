@@ -1,8 +1,48 @@
 import { useRef, useState } from 'react'
-import { byId, list, remove, save, useStore } from '../store.js'
-import { addDays, describeRepeat, eventsOn, finalizeRepeat, fmtDate, MONTHS, pad, today, WEEKDAYS, ymd } from '../utils.js'
+import { byId, list, remove, save, update, useStore } from '../store.js'
+import { addDays, describeRepeat, eventsOn, finalizeRepeat, fmtDate, MONTHS, occursOn, pad, today, WEEKDAYS, ymd } from '../utils.js'
+import { Icon } from '../icons.jsx'
+import { toast, vibrate } from '../toast.jsx'
+import { toggleTask } from './Tasks.jsx'
 import RepeatField from './Repeat.jsx'
 import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
+
+// ---------- concluir eventos ----------
+// Evento que se repete: conclui cada dia separado. Evento único (mesmo de vários dias): conclui de uma vez.
+const repete = (e) => e.repeat && e.repeat !== 'none'
+const chave = (e, d) => (repete(e) ? d : e.date)
+const feito = (e, d) => (e.concluidos || []).includes(chave(e, d))
+
+function concluirEvento(e, dias) {
+  const antes = e.concluidos || []
+  update(e.id, { concluidos: [...new Set([...antes, ...dias.map((d) => chave(e, d))])].sort() })
+  vibrate()
+  toast(`“${e.title}” concluído ✓`, { label: 'Desfazer', run: () => update(e.id, { concluidos: antes }) })
+}
+function reabrirEvento(e, d) {
+  update(e.id, { concluidos: (e.concluidos || []).filter((x) => x !== chave(e, d)) })
+}
+
+const JANELA_REPETIDOS = 30 // dias para trás em que um evento repetido sem ✓ ainda conta como atrasado
+
+// Eventos que passaram sem ✓ e tarefas vencidas: aparecem no dia de hoje até serem concluídos.
+function atrasadosAte(hoje, events, tarefas) {
+  const lista = []
+  for (const e of events) {
+    if (!e.date || e.date >= hoje) continue
+    if (!repete(e)) {
+      const fim = e.endDate && e.endDate > e.date ? e.endDate : e.date
+      if (fim < hoje && !feito(e, e.date)) lista.push({ tipo: 'evento', e, dias: [e.date] })
+      continue
+    }
+    const dias = []
+    const de = e.date > addDays(hoje, -JANELA_REPETIDOS) ? e.date : addDays(hoje, -JANELA_REPETIDOS)
+    for (let d = de; d < hoje; d = addDays(d, 1)) if (occursOn(e, d) && !feito(e, d)) dias.push(d)
+    if (dias.length) lista.push({ tipo: 'evento', e, dias })
+  }
+  for (const t of tarefas) if (!t.done && t.due < hoje) lista.push({ tipo: 'tarefa', t, dias: [t.due] })
+  return lista.sort((a, b) => a.dias[0].localeCompare(b.dias[0]))
+}
 
 const REMIND = [['none', 'Sem lembrete'], [0, 'Na hora'], [10, '10 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [120, '2 horas antes'], [1440, '1 dia antes']]
 
@@ -20,6 +60,11 @@ export default function Calendar() {
   let events = list(st, 'event')
   if (filter.length) events = events.filter((e) => !e.members?.length || e.members.some((m) => filter.includes(m)))
   const dayEvents = (d) => eventsOn(events, people, d)
+  // Tarefas com prazo também aparecem na agenda (com o mesmo filtro de pessoas).
+  const tarefas = list(st, 'task').filter((t) => t.due && (!filter.length || !t.assignee || filter.includes(t.assignee)))
+  const hoje = today()
+  const atrasos = atrasadosAte(hoje, events, tarefas)
+  const dia = (d) => ({ day: d, events: dayEvents(d), tasks: tarefas.filter((t) => t.due === d), atrasos: d === hoje ? atrasos : [] })
 
   const [y, m] = month.split('-').map(Number)
   const first = new Date(y, m - 1, 1)
@@ -94,10 +139,10 @@ export default function Calendar() {
             })}
           </div>
           <h3 className="section-title">{fmtDate(sel, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
-          <DayList events={dayEvents(sel)} onOpen={setEditing} />
+          <DayList {...dia(sel)} onOpen={setEditing} />
         </>
       ) : (
-        <Upcoming dayEvents={dayEvents} onOpen={setEditing} />
+        <Upcoming dia={dia} onOpen={setEditing} />
       )}
 
       <Fab onClick={() => setEditing({ date: sel })} label="Novo evento" />
@@ -111,35 +156,126 @@ function colorOf(st, e) {
   return byId(st, e.members?.[0])?.color || '#8b8d98'
 }
 
-function DayList({ events, onOpen }) {
+function DayList({ day, events, tasks = [], atrasos = [], onOpen }) {
   const st = useStore()
-  if (!events.length) return <p className="muted">Nenhum evento. Toque no + para adicionar.</p>
-  return events.map((e) => (
-    <button key={e.id} className="card event-row" style={{ borderLeftColor: colorOf(st, e) }} onClick={() => !e.birthday && onOpen(st.items[e.id])}>
-      <div className="event-time">{e.allDay ? 'Dia todo' : `${e.start || ''}${e.end ? '–' + e.end : ''}`}</div>
-      <div className="grow">
-        <b>{e.title}</b>
-        {e.place && <div className="muted small">📍 {e.place}</div>}
-        {e.repeat && e.repeat !== 'none' && <div className="muted small">🔁 {describeRepeat(e)}</div>}
-      </div>
+  const vazio = !events.length && !tasks.length && !atrasos.length
+  return (
+    <>
+      {atrasos.length > 0 && (
+        <section className="atrasados">
+          <div className="row">
+            <h3 className="grow">⚠️ Atrasados ({atrasos.length})</h3>
+            {atrasos.length > 1 && (
+              <button
+                className="btn ghost small"
+                onClick={() => {
+                  if (!confirm(`Concluir os ${atrasos.length} atrasados?`)) return
+                  atrasos.forEach((a) => (a.tipo === 'evento' ? update(a.e.id, { concluidos: [...new Set([...(a.e.concluidos || []), ...a.dias.map((d) => chave(a.e, d))])].sort() }) : toggleTask(a.t, st.me)))
+                  toast('Atrasados concluídos ✓')
+                }}
+              >
+                Concluir todos
+              </button>
+            )}
+          </div>
+          {atrasos.map((a) =>
+            a.tipo === 'evento' ? (
+              <EventoLinha key={'e' + a.e.id} e={a.e} day={a.dias[a.dias.length - 1]} atraso={a.dias} onOpen={onOpen} />
+            ) : (
+              <TarefaLinha key={'t' + a.t.id} t={a.t} atrasada />
+            )
+          )}
+        </section>
+      )}
+      {vazio && <p className="muted">Nenhum evento. Toque no + para adicionar.</p>}
+      {events.map((e) => (
+        <EventoLinha key={e.id} e={e} day={day} onOpen={onOpen} />
+      ))}
+      {tasks.map((t) => (
+        <TarefaLinha key={t.id} t={t} />
+      ))}
+    </>
+  )
+}
+
+const curta = (d) => d.split('-').reverse().slice(0, 2).join('/')
+
+function EventoLinha({ e, day, atraso, onOpen }) {
+  const st = useStore()
+  const ok = !e.birthday && feito(e, day)
+  return (
+    <div className={'card event-row' + (ok ? ' feito' : '') + (atraso ? ' atrasado' : '')} style={{ borderLeftColor: colorOf(st, e) }}>
+      {!e.birthday && (
+        <button
+          type="button"
+          className={'ev-check' + (ok ? ' on' : '')}
+          onClick={() => (ok ? reabrirEvento(e, day) : concluirEvento(e, atraso || [day]))}
+          aria-label={ok ? `Desmarcar “${e.title}”` : `Concluir “${e.title}”`}
+        >
+          <Icon name="check" size={18} />
+        </button>
+      )}
+      <button type="button" className="grow ev-main" onClick={() => !e.birthday && onOpen(st.items[e.id])}>
+        <span className="event-time">{e.allDay ? 'Dia todo' : `${e.start || ''}${e.end ? '–' + e.end : ''}`}</span>
+        <span className="grow ev-text">
+          <b>{e.title}</b>
+          {atraso && (
+            <span className="late small">
+              {atraso.length > 1 ? `${atraso.length} vezes sem concluir · última em ${curta(atraso[atraso.length - 1])}` : `desde ${curta(atraso[0])}`}
+            </span>
+          )}
+          {e.place && <span className="muted small">📍 {e.place}</span>}
+          {repete(e) && <span className="muted small">🔁 {describeRepeat(e)}</span>}
+        </span>
+      </button>
       <span className="avatars">
         {(e.members || []).map((id) => (
           <Avatar key={id} member={byId(st, id)} size={24} />
         ))}
       </span>
-    </button>
-  ))
+    </div>
+  )
 }
 
-function Upcoming({ dayEvents, onOpen }) {
+function TarefaLinha({ t, atrasada }) {
+  const st = useStore()
+  return (
+    <div className={'card event-row tarefa' + (t.done ? ' feito' : '') + (atrasada ? ' atrasado' : '')}>
+      <button
+        type="button"
+        className={'ev-check' + (t.done ? ' on' : '')}
+        onClick={() => {
+          toggleTask(t, st.me)
+          if (!t.done) {
+            vibrate()
+            toast(`“${t.title}” concluída 🎉`)
+          }
+        }}
+        aria-label={t.done ? `Reabrir “${t.title}”` : `Concluir “${t.title}”`}
+      >
+        <Icon name="check" size={18} />
+      </button>
+      <a href="#tasks" className="grow ev-main">
+        <span className="event-time">Tarefa</span>
+        <span className="grow ev-text">
+          <b>{t.title}</b>
+          {atrasada && <span className="late small">venceu em {curta(t.due)}</span>}
+        </span>
+      </a>
+      {t.assignee && <Avatar member={byId(st, t.assignee)} size={24} />}
+    </div>
+  )
+}
+
+function Upcoming({ dia, onOpen }) {
   const days = Array.from({ length: 60 }, (_, i) => addDays(today(), i))
-    .map((d) => [d, dayEvents(d)])
-    .filter(([, evs]) => evs.length)
+    .map((d) => dia(d))
+    .filter((x) => x.events.length || x.tasks.length || x.atrasos.length)
   if (!days.length) return <p className="muted">Nada nos próximos 60 dias.</p>
-  return days.map(([d, evs]) => (
-    <div key={d}>
-      <h3 className="section-title">{d === today() ? 'Hoje' : fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
-      <DayList events={evs} onOpen={onOpen} />
+  return days.map((x) => (
+    <div key={x.day}>
+      <h3 className="section-title">{x.day === today() ? 'Hoje' : fmtDate(x.day, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+      <DayList {...x} onOpen={onOpen} />
     </div>
   ))
 }

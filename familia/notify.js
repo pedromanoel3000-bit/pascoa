@@ -186,6 +186,8 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
       const to = ev.members?.length ? ev.members : everyone
       for (const day of [today, tomorrow]) {
         if (!occursOn(ev, day)) continue
+        // Já concluído (no dia, ou o evento todo, se ele não se repete): sem lembrete.
+        if ((ev.concluidos || []).includes(ev.repeat && ev.repeat !== 'none' ? day : ev.date)) continue
         if (ev.allDay || !ev.start) {
           if (day === today && due(local, day, MORNING)) once(`ev:${ev.id}:${day}`, () => notify(key, fam, to, 'reminders', { title: `📅 Hoje: ${ev.title}`, body: ev.place || 'Dia inteiro', url: '/#calendar', tag: 'rem-' + ev.id }))
           continue

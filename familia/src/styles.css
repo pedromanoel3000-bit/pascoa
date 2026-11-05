@@ -586,3 +586,17 @@ input.tr-in { text-align: center; font-weight: 700; padding: 10px 4px; min-width
 .tr-cardio-form { display: grid; grid-template-columns: 1fr 76px auto; gap: 8px; }
 .tr-cardio-form select { width: auto; }
 .tr-carga span:last-child { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- concluir na agenda ---------- */
+.event-row:has(.ev-check) { padding: 10px 12px; }
+.ev-main { display: flex; align-items: center; gap: 12px; text-align: left; min-width: 0; }
+.ev-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ev-check { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); background: var(--card); color: transparent; display: flex; align-items: center; justify-content: center; flex: none; }
+.ev-check:hover { color: var(--muted); }
+.ev-check.on { background: var(--pos); border-color: var(--pos); color: #fff; }
+.event-row.feito b { text-decoration: line-through; color: var(--muted); }
+.event-row.feito .event-time { opacity: .6; }
+.event-row.atrasado { border-left-color: var(--danger) !important; }
+.event-row.tarefa { border-left-color: var(--pos); }
+.atrasados { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--radius); background: color-mix(in srgb, var(--danger) 7%, transparent); }
+.atrasados h3 { font-size: .95rem; color: var(--danger); }
