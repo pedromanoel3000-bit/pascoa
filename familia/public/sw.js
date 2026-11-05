@@ -1,7 +1,7 @@
 // Roda em segundo plano: abre o app sem internet e mostra as notificações.
-const CACHE = 'nosso-lar-v3'
+const CACHE = 'nosso-lar-v4'
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icon.svg', '/manifest.webmanifest'])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icon.svg', '/icon-192.png', '/manifest.webmanifest'])))
   self.skipWaiting()
 })
 self.addEventListener('activate', (e) => {
@@ -33,8 +33,8 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'Nosso Lar', {
       body: data.body || '',
-      icon: '/icon.svg',
-      badge: '/icon.svg',
+      icon: '/icon-192.png',
+      badge: '/badge-96.png',
       tag: data.tag,
       renotify: Boolean(data.tag),
       data: { url: data.url || '/', nid: data.nid || null },
