@@ -321,7 +321,8 @@ function Sessao({ programa, plano }) {
     }
   }, [])
 
-  const semana = T.semanaDe(programa.inicio, d.data)
+  const atualSemana = T.semanaAtual(programa, plano, sessoes, d.data)
+  const semana = atualSemana.semana
   const info = T.semanaInfo(semana, plano)
   const tr = plano.treinos[d.treino]
   const barra = programa.barra ?? T.BARRA_PADRAO
@@ -426,6 +427,7 @@ function Sessao({ programa, plano }) {
             {semana <= plano.bloco ? ` de ${plano.bloco}` : ''}
           </b>
           <span className="muted"> · {info.fase}</span>
+          {atualSemana.ciclo && <span className="muted"> · treino {atualSemana.treino} de {T.TREINOS_POR_SEMANA}</span>}
           <span className="grow" />
           <span className="muted small">
             {feitas}/{total} séries
@@ -544,7 +546,7 @@ function Sessao({ programa, plano }) {
         </section>
       )}
 
-      {plano.cardioSemanal && <CardioSemana programa={programa} plano={plano} sessoes={sessoes} />}
+      {plano.cardioSemanal && <CardioSemana programa={programa} plano={plano} sessoes={sessoes} semana={semana} />}
 
       <button className="btn primary big" onClick={concluir}>
         Concluir treino {d.treino}
@@ -800,14 +802,14 @@ function Importar({ programa, plano, sessoes, onClose }) {
 // ---------- cardio da semana (planos com meta semanal) ----------
 const TIPOS_CARDIO = ['Corrida', 'Caminhada', 'Esteira', 'Bike', 'Escada', 'Elíptico', 'Outro']
 
-function CardioSemana({ programa, plano, sessoes }) {
+function CardioSemana({ programa, plano, sessoes, semana }) {
   const st = useStore()
   const [aberto, setAberto] = useState(false)
   const [min, setMin] = useState('')
   const [tipo, setTipo] = useState('Corrida')
-  const n = T.semanaDe(programa.inicio, today())
-  const [de, ate] = T.datasDaSemana(programa.inicio, n)
-  const meta = T.semanaInfo(n, plano).cardioSemana || 0
+  // A meta segue a semana do plano; os minutos contam nos 7 dias corridos desde a data de início.
+  const [de, ate] = T.datasDaSemana(programa.inicio, T.semanaDe(programa.inicio, today()))
+  const meta = T.semanaInfo(semana, plano).cardioSemana || 0
   const naSemana = (data) => data >= de && data <= ate
   const avulsos = list(st, 'treinoCardio')
     .filter((c) => c.memberId === st.me && naSemana(c.data))
@@ -899,10 +901,15 @@ function ResumoTreinos({ plano, barra }) {
 }
 
 function Plano({ programa, plano }) {
+  const st = useStore()
+  const sessoes = minhasSessoes(st, plano)
   const barra = programa.barra ?? T.BARRA_PADRAO
   const [barraTxt, setBarraTxt] = useState(T.fmtKg(barra))
   const [proteinaTxt, setProteinaTxt] = useState(programa.proteina ? String(programa.proteina) : '')
-  const hoje = T.semanaDe(programa.inicio, today())
+  const atual = T.semanaAtual(programa, plano, sessoes)
+  const hoje = atual.semana
+  const porCiclo = atual.ciclo
+  const N = T.TREINOS_POR_SEMANA
   const curta = (s) => T.dataBR(s).slice(0, 5)
   const trocarPlano = (id) => {
     if (id === plano.id) return
@@ -947,7 +954,16 @@ function Plano({ programa, plano }) {
             />
           </Field>
         )}
-        <p className="muted small">Fila A → B → C → D → A: faltou um dia, faz o próximo. Agora é a vez do treino {programa.proximo}.</p>
+        <Field label="Como contar as semanas">
+          <select value={T.modoSemana(programa, plano)} onChange={(e) => update(programa.id, { semanaPor: e.target.value })}>
+            <option value="ciclo">A cada {N} treinos concluídos (A, B, C e D)</option>
+            <option value="data">Pela data de início (a cada 7 dias)</option>
+          </select>
+        </Field>
+        <p className="muted small">
+          Fila A → B → C → D → A: faltou um dia, faz o próximo. Agora é a vez do treino {programa.proximo}
+          {porCiclo ? ` (treino ${atual.treino} de ${N} da semana ${hoje})` : ''}.
+        </p>
       </section>
 
       <section className="card">
@@ -959,9 +975,7 @@ function Plano({ programa, plano }) {
             return (
               <div key={n} className={'tr-crono-row' + (n === hoje ? ' on' : '')}>
                 <b>Semana {n}</b>
-                <span className="muted small">
-                  {curta(a)} a {curta(b)}
-                </span>
+                <span className="muted small">{porCiclo ? `treinos ${(n - 1) * N + 1} a ${n * N}` : `${curta(a)} a ${curta(b)}`}</span>
                 <span className="small">
                   {i.fase} · {i.seriesTxt} · RIR {i.rir} · {i.cardioSemana ? `cardio ${i.cardioSemana} min na semana` : `cardio ${i.cardio}`}
                   {i.deload ? ' · mesma carga ou 10% menos' : ''}
@@ -971,7 +985,7 @@ function Plano({ programa, plano }) {
           })}
           <div className={'tr-crono-row' + (hoje > plano.bloco ? ' on' : '')}>
             <b>Depois</b>
-            <span className="muted small">a partir de {curta(T.datasDaSemana(programa.inicio, plano.bloco + 1)[0])}</span>
+            <span className="muted small">{porCiclo ? `a partir do treino ${plano.bloco * N + 1}` : `a partir de ${curta(T.datasDaSemana(programa.inicio, plano.bloco + 1)[0])}`}</span>
             <span className="small">Fim do bloco: peça ao Claude o próximo.</span>
           </div>
         </div>

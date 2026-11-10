@@ -493,6 +493,7 @@ export const PLANOS = {
     bloco: BLOCO,
     treinos: TREINOS,
     semana: semanaHipertrofia,
+    semanaPor: 'data',
     fimTxt: 'Até lá, os treinos seguem como na semana 3 (3 séries, RIR 3).',
     cardioSemanal: false,
     diaLeve: false,
@@ -513,10 +514,12 @@ export const PLANOS = {
     bloco: BLOCO,
     treinos: TREINOS_RECOMPOSICAO,
     semana: semanaRecomposicao,
+    semanaPor: 'ciclo',
     fimTxt: 'Até lá, os treinos seguem como na semana 4 (3 séries, RIR 2).',
     cardioSemanal: true,
     diaLeve: true,
     regras: [
+      'Cada semana do plano = 4 treinos concluídos (A, B, C e D), não importa em quantos dias.',
       'Semanas 1–2 (retomada): no máximo 2 séries por exercício, RIR 3–4.',
       'Semana 3: 3 séries, RIR 3. Semana 4: RIR 2. Semanas 5–6: RIR 1. Semanas 7–8: RIR 0–1, até o limite.',
       'Sem semana de deload. Em dias de pouca energia (ex.: menstruação), marque “dia de pouca energia” no treino: use a carga que der para cumprir o RIR e a meta da próxima vez não muda.',
@@ -545,3 +548,16 @@ export const PLANO_PADRAO = PLANOS.hipertrofia
 export const planoDe = (programa) => PLANOS[programa?.plano] || PLANO_PADRAO
 export const planoDaSessao = (s) => s.plano || PLANO_PADRAO.id
 export const semanaInfo = (n, plano = PLANO_PADRAO) => plano.semana(n)
+
+// Como as semanas contam: 'data' (7 dias a partir do início) ou 'ciclo' (a cada 4 treinos concluídos).
+export const TREINOS_POR_SEMANA = 4
+export const modoSemana = (programa, plano = PLANO_PADRAO) => programa?.semanaPor || plano.semanaPor || 'data'
+
+// Semana em que a pessoa está. `sessoes` = as sessões dela neste plano.
+export function semanaAtual(programa, plano, sessoes, data = today()) {
+  if (modoSemana(programa, plano) === 'ciclo') {
+    const feitos = sessoes.filter((s) => s.data >= programa.inicio).length
+    return { semana: Math.floor(feitos / TREINOS_POR_SEMANA) + 1, treino: (feitos % TREINOS_POR_SEMANA) + 1, ciclo: true }
+  }
+  return { semana: semanaDe(programa.inicio, data), treino: null, ciclo: false }
+}
