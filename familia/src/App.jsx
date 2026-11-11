@@ -18,6 +18,7 @@ import Locator from './pages/Locator.jsx'
 import Notes from './pages/Notes.jsx'
 import Wishes from './pages/Wishes.jsx'
 import Treino from './pages/Treino.jsx'
+import Magia from './pages/Magia.jsx'
 import Notifications, { NotifBell, unreadNotifs, usePendingReads } from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import { unreadCount } from './pages/Chat.jsx'
@@ -74,6 +75,23 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [page])
+  // Barra mágica: abre pelo ✨, pela barra do Início ou com Ctrl/⌘ + K.
+  const [magia, setMagia] = useState(null)
+  useEffect(() => {
+    const abrir = (e) => setMagia({ texto: typeof e.detail === 'string' ? e.detail : '' })
+    const tecla = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setMagia((m) => (m ? null : { texto: '' }))
+      }
+    }
+    window.addEventListener('abrir-magia', abrir)
+    window.addEventListener('keydown', tecla)
+    return () => {
+      window.removeEventListener('abrir-magia', abrir)
+      window.removeEventListener('keydown', tecla)
+    }
+  }, [])
   // Mantém o cadastro de notificações deste aparelho ligado à pessoa certa.
   useEffect(() => {
     if (st.family && st.me) refreshPush()
@@ -108,6 +126,9 @@ export default function App() {
             <img src="/icon.svg" alt="" /> {famName}
           </span>
           <SyncBadge />
+          <button type="button" className="icon-btn magia-btn" onClick={() => setMagia({ texto: '' })} aria-label="Barra mágica: criar ou buscar">
+            <Icon name="spark" />
+          </button>
           <NotifBell />
           <a href="#settings">
             <Avatar member={me} size={32} />
@@ -115,6 +136,7 @@ export default function App() {
         </div>
         <Page key={page} />
       </main>
+      {magia && <Magia paginas={PAGES} textoInicial={magia.texto} onClose={() => setMagia(null)} />}
       <Toaster />
       <nav className="bottom-nav">
         {BOTTOM.map((k) => (

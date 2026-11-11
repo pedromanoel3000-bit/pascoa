@@ -7,6 +7,7 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 
 | Tela | O que faz |
 |---|---|
+| **Barra mágica** | Escreva ou fale do seu jeito (“dentista amanhã às 15h”, “comprar leite e pão”, “gastei 35,90 no mercado”) e o app cria o evento, a tarefa, a compra, o gasto ou o recado. Também busca em tudo. Abre pelo ✨, pela barra do Início ou com Ctrl/⌘ + K. Roda no aparelho, sem serviço externo |
 | **Mural** | Resumo do dia, contagens regressivas (eventos marcados e aniversários dos próximos 30 dias), recados, fotos e votações rápidas |
 | **Agenda** | Calendário compartilhado com cor por pessoa, repetição (inclusive personalizada: a cada N dias/semanas/meses/anos, dias da semana, “3ª quarta do mês”, até uma data ou N vezes), filtro por membro e aniversários automáticos |
 | **Listas** | Compras, afazeres, viagem… Itens marcados por quem fez; sugestões dos itens mais comprados enquanto digita |

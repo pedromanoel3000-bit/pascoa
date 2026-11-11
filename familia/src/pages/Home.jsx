@@ -5,6 +5,7 @@ import { Avatar, Empty, useMembers } from '../ui.jsx'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { PushBanner } from './PushSettings.jsx'
+import { abrirMagia } from './Magia.jsx'
 import { toggleTask } from './Tasks.jsx'
 import { SLOTS } from './Meals.jsx'
 import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
@@ -71,6 +72,12 @@ export default function Home() {
           })}
         </div>
       </section>
+
+      <button type="button" className="magia-barra" onClick={() => abrirMagia()}>
+        <Icon name="spark" />
+        <span className="grow">Escreva ou fale: “dentista amanhã às 15h”</span>
+        <Icon name="mic" size={20} />
+      </button>
 
       <PushBanner />
       <Countdowns />
