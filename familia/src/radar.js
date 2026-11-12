@@ -5,7 +5,25 @@ import { addDays, daysUntil, joinPt, money, nextBirthday, occursOn, weekdayOf, W
 const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const AR_LIVRE = /\b(churrasco|praia|parque|piquenique|picnic|trilha|passeio|corrida|correr|caminhada|pedal|bike|bicicleta|futebol|jogo|piscina|clube|camping|acampamento|pescaria|feira|quintal|zoologico|sitio|chacara|fazenda|cachoeira|show|festival)\b/
 const PRESENTE = /\b(presente|presentes|lembrancinha)\b/
+const CONTA = /\b(pagar|pagamento|boleto|fatura|conta|contas|vencimento|aluguel|parcela|prestacao|iptu|ipva|condominio|mensalidade)\b/
 const MERCADO = /\b(mercado|supermercado|compras|feira|atacado|atacadao)\b/
+// Tipos de aviso que a pessoa pode ligar e desligar (tela Radar).
+export const TIPOS = [
+  ['agenda', '⚠️', 'Agenda', 'Compromissos no mesmo horário, amanhã cheio ou cedo, resumo da semana no domingo'],
+  ['chuva', '🌧️', 'Chuva', 'Chuva prevista em programa ao ar livre'],
+  ['aniversario', '🎁', 'Aniversários e presentes', 'Aniversário chegando sem presente, ou presente reservado para comprar'],
+  ['tarefas', '🕰️', 'Tarefas', 'Atrasadas há uma semana ou mais, sem responsável, concentradas em uma pessoa'],
+  ['contas', '🧾', 'Contas', 'Tarefa de pagamento que vence hoje ou amanhã'],
+  ['compras', '🛒', 'Compras', 'Lista acumulando e itens que devem estar acabando'],
+  ['refeicoes', '🍽️', 'Refeições', 'Jantar de amanhã sem plano'],
+  ['dinheiro', '💸', 'Dinheiro', 'Categoria acima do mês passado e mês no vermelho'],
+  ['voto', '📊', 'Votações', 'Votação esperando o seu voto'],
+  ['treino', '🏋️', 'Treino', 'Vários dias sem treinar (só você vê)'],
+  ['emdia', '🎉', 'Boas notícias', 'Quando a casa está em dia'],
+]
+const GRUPO = { conflito: 'agenda', ocupados: 'agenda', cheio: 'agenda', cedo: 'agenda', semana: 'agenda', reservado: 'aniversario', atrasada: 'tarefas', semdono: 'tarefas', divisao: 'tarefas', conta: 'contas', ritmo: 'compras', jantar: 'refeicoes', gasto: 'dinheiro', saldo: 'dinheiro' }
+export const grupoDe = (tipo) => GRUPO[tipo] || tipo
+
 const minutos = (hhmm) => {
   const [h, m] = String(hhmm || '').split(':').map(Number)
   return Number.isFinite(h) ? h * 60 + (m || 0) : null
@@ -30,8 +48,11 @@ const Maiuscula = (s) => s.charAt(0).toUpperCase() + s.slice(1)
  * @param agoraMin  minutos desde a meia-noite (para ignorar o que já passou hoje)
  * @param previsao  { 'aaaa-mm-dd': chance de chuva em % } ou null
  * @param vistos    { idDoAviso: quando foi dispensado }
+ * @param adiados   { idDoAviso: até quando fica escondido (ms) }
+ * @param desligados  tipos de aviso que a pessoa não quer (ver TIPOS)
+ * @param agora     ms, para comparar com os adiados
  */
-export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vistos = {} }) {
+export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vistos = {}, adiados = {}, desligados = [], agora = Date.now() }) {
   const de = (tipo) => itens.filter((i) => i.type === tipo && !i.deleted)
   const membros = de('member')
   const todos = membros.map((m) => m.id)
@@ -201,5 +222,103 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
     }
   }
 
-  return achados.filter((a) => (!a.para || a.para.includes(eu)) && !vistos[a.id]).sort((a, b) => b.peso - a.peso)
+  // 10. Votação aberta esperando o voto de quem está lendo.
+  const votos = de('vote').filter((v) => v.option)
+  const quinzena = new Date(`${addDays(hoje, -14)}T00:00:00`).getTime()
+  for (const p of de('post').filter((p) => p.poll && !p.closed && (p.createdAt || 0) >= quinzena)) {
+    const doPost = votos.filter((v) => v.postId === p.id)
+    if (doPost.some((v) => v.createdBy === eu)) continue
+    add({ id: `voto:${p.id}`, icone: '📊', peso: 65, para: [eu], titulo: 'Votação esperando seu voto', texto: `“${p.text || 'Votação'}”${doPost.length ? ` — ${plural(doPost.length, 'pessoa já votou', 'pessoas já votaram')}.` : '.'}`, acoes: [{ tipo: 'ir', rotulo: 'Votar', ir: '#home' }] })
+  }
+
+  // 11. Conta com vencimento hoje ou amanhã.
+  for (const t of abertas.filter((t) => (t.due === hoje || t.due === amanha) && CONTA.test(fold(t.title)) && (!t.assignee || t.assignee === eu))) {
+    const eHoje = t.due === hoje
+    add({ id: `conta:${t.id}:${t.due}`, icone: '🧾', peso: eHoje ? 98 : 80, para: t.assignee ? [t.assignee] : null, titulo: eHoje ? 'Vence hoje' : 'Vence amanhã', texto: `“${t.title}” está marcada para ${eHoje ? 'hoje' : 'amanhã'}.`, acoes: [{ tipo: 'concluir', rotulo: 'Já paguei', id: t.id }, { tipo: 'ir', rotulo: 'Abrir', ir: '#tasks' }] })
+  }
+
+  // 12. Presente que quem está lendo reservou e o aniversário está chegando.
+  for (const w of de('wish').filter((w) => w.reservedBy === eu && !w.received && w.owner !== eu)) {
+    const dono = membros.find((m) => m.id === w.owner)
+    if (!dono?.birthday) continue
+    const dia = nextBirthday(dono.birthday, hoje)
+    const d = daysUntil(dia, hoje)
+    if (d < 0 || d > 5) continue
+    add({ id: `reservado:${w.id}:${dia.slice(0, 4)}`, icone: '🎀', peso: 76 - d, para: [eu], titulo: `Presente de ${dono.name}: já comprou?`, texto: `Você reservou “${w.title}” e o aniversário é ${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d} dias`}.`, acoes: [{ tipo: 'ir', rotulo: 'Ver desejos', ir: '#wishes' }] })
+  }
+
+  // 13. Ritmo de compra: itens que costumam voltar para a lista e já passaram do prazo de costume.
+  if (compras) {
+    const doMeio = new Date(`${hoje}T12:00:00`).getTime()
+    const grupos = {}
+    for (const i of de('listItem').filter((i) => i.listId === compras.id && i.createdAt)) (grupos[fold(i.title).trim()] = grupos[fold(i.title).trim()] || []).push(i)
+    const acabando = []
+    for (const g of Object.values(grupos)) {
+      if (g.length < 3 || g.some((i) => !i.done && !i.archived)) continue
+      g.sort((x, y) => x.createdAt - y.createdAt)
+      const saltos = g.slice(1).map((i, k) => (i.createdAt - g[k].createdAt) / 86400000).filter((x) => x >= 1).sort((x, y) => x - y)
+      if (saltos.length < 2) continue
+      const costume = saltos[Math.floor(saltos.length / 2)]
+      const faz = (doMeio - g[g.length - 1].createdAt) / 86400000
+      if (costume >= 2 && faz >= costume * 1.25 && faz <= costume * 4) acabando.push({ titulo: g[g.length - 1].title, costume: Math.round(costume), faz: Math.round(faz), atraso: faz / costume })
+    }
+    acabando.sort((x, y) => y.atraso - x.atraso)
+    if (acabando.length) {
+      const top = acabando.slice(0, 4)
+      const um = top.length === 1
+      add({
+        id: `ritmo:${semana(hoje)}:${top.map((x) => fold(x.titulo)).join('+')}`,
+        icone: '🔮',
+        peso: 44,
+        titulo: 'Deve estar acabando',
+        texto: um ? `${Maiuscula(top[0].titulo)} costuma entrar na lista a cada ${top[0].costume} dias e já faz ${top[0].faz}.` : `${Maiuscula(joinPt(top.map((x) => x.titulo)))} costumam voltar para a lista e já passaram do prazo de costume.`,
+        acoes: [{ tipo: 'adicionarCompras', rotulo: um ? 'Pôr na lista' : `Pôr os ${top.length} na lista`, listId: compras.id, titulos: top.map((x) => x.titulo) }, { tipo: 'ir', rotulo: 'Ver a lista', ir: '#lists' }],
+      })
+    }
+  }
+
+  // 14. Mês no vermelho (só se a família registra as entradas).
+  if (diaDoMes >= 10) {
+    const mes = hoje.slice(0, 7)
+    const doMes = de('expense').filter((g) => g.date?.slice(0, 7) === mes)
+    const entrou = doMes.filter((g) => g.kind === 'in').reduce((t, g) => t + (Number(g.amount) || 0), 0)
+    const saiu = doMes.filter((g) => g.kind !== 'in').reduce((t, g) => t + (Number(g.amount) || 0), 0)
+    if (entrou > 0 && saiu > entrou) add({ id: `saldo:${mes}`, icone: '📉', peso: 39, titulo: 'O mês está no vermelho', texto: `Saíram ${money(saiu)} e entraram ${money(entrou)} até agora: ${money(saiu - entrou)} a mais do que entrou.`, acoes: [{ tipo: 'ir', rotulo: 'Ver o orçamento', ir: '#budget' }] })
+  }
+
+  // 15. Muitas tarefas sem responsável.
+  const semDono = abertas.filter((t) => !t.assignee)
+  if (todos.length > 1 && semDono.length >= 5) add({ id: `semdono:${semana(hoje)}`, icone: '🙋', peso: 28, titulo: `${semDono.length} tarefas sem responsável`, texto: `Tarefa sem dono costuma ficar para depois. Exemplos: ${joinPt(semDono.slice(0, 2).map((t) => `“${t.title}”`))}.`, acoes: [{ tipo: 'ir', rotulo: 'Dividir tarefas', ir: '#tasks' }] })
+
+  // 16. Treino: quem vinha treinando e parou (só a própria pessoa vê).
+  const sessoes = de('treinoSessao').filter((x) => x.memberId === eu && x.data && x.data <= hoje).sort((a, b) => b.data.localeCompare(a.data))
+  if (sessoes.length) {
+    const ultima = sessoes[0]
+    const parado = daysUntil(hoje, ultima.data)
+    const ritmo = sessoes.filter((x) => daysUntil(ultima.data, x.data) <= 21).length
+    if (parado >= 5 && parado <= 30 && ritmo >= 3) add({ id: `treino:${eu}:${ultima.data}:${Math.floor(parado / 5)}`, icone: '🏋️', peso: 50, para: [eu], titulo: `${parado} dias sem treinar`, texto: `O último foi em ${ultima.data.slice(8)}/${ultima.data.slice(5, 7)}${ultima.treino ? ` (treino ${ultima.treino})` : ''}. Você vinha num bom ritmo.`, acoes: [{ tipo: 'ir', rotulo: 'Abrir o treino', ir: '#treino' }] })
+  }
+
+  // 17. Amanhã começa cedo.
+  const cedo = doDia(amanha).filter((e) => !e.allDay && minutos(e.start) != null && minutos(e.start) <= 450 && quemVai(e).includes(eu)).sort((a, b) => a.start.localeCompare(b.start))[0]
+  if (cedo) add({ id: `cedo:${amanha}:${cedo.id}`, icone: '⏰', peso: 52, para: [eu], titulo: 'Amanhã começa cedo', texto: `“${cedo.title}” às ${cedo.start}${cedo.place ? `, em ${cedo.place}` : ''}.`, acoes: [{ tipo: 'ir', rotulo: 'Abrir a agenda', ir: '#calendar' }] })
+
+  // 18. Domingo: resumo da semana que vem.
+  if (weekdayOf(hoje) === 0) {
+    const porDia = [1, 2, 3, 4, 5, 6, 7].map((d) => ({ dia: addDays(hoje, d), n: doDia(addDays(hoje, d)).filter((e) => quemVai(e).includes(eu)).length }))
+    const comp = porDia.reduce((t, x) => t + x.n, 0)
+    const tar = abertas.filter((t) => t.due && t.due > hoje && t.due <= addDays(hoje, 7) && (!t.assignee || t.assignee === eu)).length
+    const pico = [...porDia].sort((a, b) => b.n - a.n)[0]
+    if (comp + tar > 0) add({ id: `semana:${semana(hoje)}:${eu}`, icone: '🧭', peso: 36, para: [eu], titulo: 'Sua semana', texto: `${plural(comp, 'compromisso', 'compromissos')} e ${plural(tar, 'tarefa', 'tarefas')} nos próximos 7 dias.${pico.n >= 2 ? ` O dia mais cheio é ${WEEKDAYS_LONG[weekdayOf(pico.dia)]}, com ${pico.n}.` : ''}`, acoes: [{ tipo: 'ir', rotulo: 'Abrir a agenda', ir: '#calendar' }] })
+  }
+
+  // 19. Boa notícia: nada atrasado e uma semana produtiva.
+  const seteDias = new Date(`${addDays(hoje, -7)}T00:00:00`).getTime()
+  const feitas7 = tarefas.filter((t) => t.done && t.doneAt >= seteDias).length
+  if (feitas7 >= 5 && !abertas.some((t) => t.due && t.due < hoje) && !achados.some((a) => a.id.startsWith('divisao:'))) add({ id: `emdia:${semana(hoje)}`, icone: '🎉', peso: 12, bom: true, titulo: 'Casa em dia', texto: `${feitas7} tarefas concluídas nos últimos 7 dias e nada atrasado. Bom trabalho${todos.length > 1 ? ' de equipe' : ''}!`, acoes: [] })
+
+  return achados
+    .map((a) => ({ ...a, tipo: a.id.split(':')[0] }))
+    .filter((a) => (!a.para || a.para.includes(eu)) && !vistos[a.id] && !(adiados[a.id] > agora) && !desligados.includes(GRUPO[a.tipo] || a.tipo))
+    .sort((a, b) => b.peso - a.peso)
 }

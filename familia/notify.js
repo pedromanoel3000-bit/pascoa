@@ -241,7 +241,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
     for (const m of comAviso) {
       if (fam.items[m]?.type !== 'member' || fam.items[m].deleted) continue
       const avisados = Object.fromEntries(Object.entries(fam.items['radar-avisos-' + m]?.avisados || {}).filter(([, t]) => t > corte))
-      const [achado] = radar({ itens, eu: m, hoje: local.day, agoraMin: local.minutes, previsao, vistos: { ...(fam.items['radar-' + m]?.vistos || {}), ...avisados } })
+      const [achado] = radar({ itens, eu: m, hoje: local.day, agoraMin: local.minutes, previsao, vistos: { ...(fam.items['radar-' + m]?.vistos || {}), ...avisados }, adiados: fam.items['radar-' + m]?.adiados || {}, desligados: fam.items['radar-' + m]?.desligados || [] })
       if (!achado) continue
       putItem(key, fam, { id: 'radar-avisos-' + m, type: 'radarAviso', avisados: { ...avisados, [achado.id]: Date.now() } })
       notify(key, fam, [m], 'radar', { title: `${achado.icone} ${achado.titulo}`, body: achado.texto, url: '/#home', tag: 'radar' })
