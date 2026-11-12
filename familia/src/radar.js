@@ -228,7 +228,7 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
   for (const p of de('post').filter((p) => p.poll && !p.closed && (p.createdAt || 0) >= quinzena)) {
     const doPost = votos.filter((v) => v.postId === p.id)
     if (doPost.some((v) => v.createdBy === eu)) continue
-    add({ id: `voto:${p.id}`, icone: '📊', peso: 65, para: [eu], titulo: 'Votação esperando seu voto', texto: `“${p.text || 'Votação'}”${doPost.length ? ` — ${plural(doPost.length, 'pessoa já votou', 'pessoas já votaram')}.` : '.'}`, acoes: [{ tipo: 'ir', rotulo: 'Votar', ir: '#home' }] })
+    add({ id: `voto:${p.id}`, icone: '📊', peso: 65, para: [eu], titulo: 'Votação esperando seu voto', texto: `“${p.text || 'Votação'}”${doPost.length ? ` — ${plural(doPost.length, 'pessoa já votou', 'pessoas já votaram')}.` : '.'}`, acoes: [{ tipo: 'ir', rotulo: 'Votar', ir: '#mural' }] })
   }
 
   // 11. Conta com vencimento hoje ou amanhã.

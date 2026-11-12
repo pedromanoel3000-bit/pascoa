@@ -12,6 +12,7 @@ export const ATALHOS = {
   agenda: ['#calendar', 'calendar', 'Agenda', '#3e63dd', 'Abrir'],
   listas: ['#lists', 'list', 'Listas', '#12a594', 'Abrir'],
   tarefas: ['#tasks', 'tasks', 'Tarefas', '#46a758', 'Abrir'],
+  mural: ['#mural', 'pin', 'Mural', '#d6409f', 'Abrir'],
   treino: ['#treino', 'dumbbell', 'Treino', '#e54d2e', 'Abrir'],
   refeicoes: ['#meals', 'meals', 'Refeições', '#f76b15', 'Abrir'],
   fotos: ['#photos', 'photos', 'Fotos', '#d6409f', 'Abrir'],
@@ -38,7 +39,7 @@ export const SECOES = {
   hoje: ['Hoje', 'Agenda e refeições do dia'],
   compras: ['Compras', 'A lista, com campo para adicionar'],
   tarefas: ['Minhas tarefas', 'O que está com você'],
-  mural: ['Mural da família', 'Recados, fotos e votações'],
+  mural: ['Mural da família', 'Os recados mais recentes, resumidos'],
 }
 export const SECOES_PADRAO = Object.keys(SECOES)
 export const EM_GRADE = ['hoje', 'compras', 'tarefas'] // lado a lado em telas largas

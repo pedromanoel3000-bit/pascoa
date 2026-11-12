@@ -129,7 +129,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
         notify(key, fam, to, 'events', { title: `📅 ${who} marcou um evento`, body: `${it.title} · ${when}`, url: '/#calendar', tag: 'event-' + it.id })
       } else if (it.type === 'post' && isNew) {
         const title = it.poll ? `📊 ${who} criou uma votação` : `${who} postou no mural`
-        notify(key, fam, others(everyone), 'posts', { title, body: it.text || '📷 Nova foto', url: '/#home', tag: 'post-' + it.id })
+        notify(key, fam, others(everyone), 'posts', { title, body: it.text || '📷 Nova foto', url: '/#mural', tag: 'post-' + it.id })
       } else if (it.type === 'listItem' && isNew) {
         queueListItem(key, fam, actor, it)
       }

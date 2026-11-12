@@ -70,6 +70,7 @@ const P = {
       <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
     </>
   ),
+  pin: <path d="M9 4h6l-1 6 3 3v2H7v-2l3-3zM12 15v6" />,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   plus: <path d="M12 5v14M5 12h14" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,

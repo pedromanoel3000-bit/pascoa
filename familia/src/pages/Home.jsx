@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
 import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, resizeImage, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
-import { Avatar, Empty, useMembers } from '../ui.jsx'
+import { Avatar, useMembers } from '../ui.jsx'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { PushBanner } from './PushSettings.jsx'
@@ -142,16 +142,7 @@ export default function Home() {
         )}
       </section>
     ),
-    mural: () => (
-      <>
-        <h2 className="section-title">Mural da família</h2>
-        <Composer />
-        {posts.length === 0 && <Empty icon="📌" text="O mural está vazio. Escreva um recado ou poste uma foto para a família." />}
-        {posts.map((p) => (
-          <Post key={p.id} post={p} />
-        ))}
-      </>
-    ),
+    mural: () => <MuralCompacto posts={posts} />,
   }
 
   // Na ordem escolhida; os cartões Hoje, Compras e Tarefas que ficarem seguidos dividem a mesma grade.
@@ -185,6 +176,68 @@ export default function Home() {
       </button>
       {personalizando && <Personalizar onClose={() => setPersonalizando(false)} />}
     </div>
+  )
+}
+
+// Mural no Início: só os recados mais recentes, em formato resumido. Tocar em um recado abre ele inteiro;
+// "Ver mais" mostra os outros e "Abrir" leva à tela do mural.
+const NO_INICIO = 3
+function MuralCompacto({ posts }) {
+  const st = useStore()
+  const [escrevendo, setEscrevendo] = useState(false)
+  const [todos, setTodos] = useState(false)
+  const [abertos, setAbertos] = useState(() => new Set())
+  const votos = list(st, 'vote').filter((v) => v.option)
+  const visiveis = todos ? posts : posts.slice(0, NO_INICIO)
+  const abrir = (id) => setAbertos(new Set([...abertos, id]))
+  return (
+    <section className="mural-c">
+      <div className="mural-c-topo">
+        <h2 className="section-title grow">Mural da família</h2>
+        <a href="#mural" className="muted small">
+          Abrir ›
+        </a>
+      </div>
+      {escrevendo ? (
+        <Composer />
+      ) : (
+        <button type="button" className="card mural-c-escrever" onClick={() => setEscrevendo(true)}>
+          <Avatar member={byId(st, st.me)} size={28} />
+          <span className="grow muted">Escreva um recado…</span>
+          <span aria-hidden="true">📷 📊</span>
+        </button>
+      )}
+      {posts.length === 0 && <p className="muted small center">O mural está vazio.</p>}
+      {visiveis.map((p) => {
+        if (abertos.has(p.id)) return <Post key={p.id} post={p} />
+        const autor = byId(st, p.createdBy)
+        const doPost = votos.filter((v) => v.postId === p.id)
+        const falta = p.poll && !p.closed && !doPost.some((v) => v.createdBy === st.me)
+        return (
+          <button type="button" key={p.id} className="card mural-c-post" onClick={() => abrir(p.id)} aria-label={`Abrir recado de ${autor?.name || 'alguém'}`}>
+            <Avatar member={autor} size={28} />
+            <div className="grow">
+              <div className="mural-c-quem">
+                <b>{autor?.name || 'Alguém'}</b>
+                <small className="muted">{timeAgo(p.createdAt)}</small>
+              </div>
+              <p className="mural-c-texto">{p.text || (p.photo ? '📷 Foto' : '')}</p>
+              <div className="mural-c-info muted small">
+                {p.poll && <span className={falta ? 'late' : ''}>📊 {falta ? 'Falta o seu voto' : `${doPost.length} ${doPost.length === 1 ? 'voto' : 'votos'}`}</span>}
+                {(p.likes || []).length > 0 && <span>❤️ {p.likes.length}</span>}
+                {(p.comments || []).length > 0 && <span>💬 {p.comments.length}</span>}
+              </div>
+            </div>
+            {p.photo && <img className="mural-c-foto" src={p.photo} alt="" />}
+          </button>
+        )
+      })}
+      {posts.length > NO_INICIO && (
+        <button type="button" className="mural-c-mais" aria-expanded={todos} onClick={() => setTodos(!todos)}>
+          {todos ? 'Mostrar menos ⌃' : `Ver mais ${posts.length - NO_INICIO} ${posts.length - NO_INICIO === 1 ? 'recado' : 'recados'} ⌄`}
+        </button>
+      )}
+    </section>
   )
 }
 
@@ -244,7 +297,7 @@ function ShoppingCard() {
   )
 }
 
-function Composer() {
+export function Composer() {
   const [text, setText] = useState('')
   const [photo, setPhoto] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -335,7 +388,7 @@ function Composer() {
   )
 }
 
-function Post({ post }) {
+export function Post({ post }) {
   const st = useStore()
   const author = byId(st, post.createdBy)
   const [comment, setComment] = useState('')

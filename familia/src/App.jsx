@@ -20,6 +20,7 @@ import Wishes from './pages/Wishes.jsx'
 import Treino from './pages/Treino.jsx'
 import Magia from './pages/Magia.jsx'
 import RadarPagina from './pages/Radar.jsx'
+import Mural from './pages/Mural.jsx'
 import Notifications, { NotifBell, unreadNotifs, usePendingReads } from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
 import { unreadCount } from './pages/Chat.jsx'
@@ -32,6 +33,7 @@ export const PAGES = {
   tasks: { label: 'Tarefas', ic: 'tasks', tint: '#46a758', C: Tasks },
   treino: { label: 'Treino', ic: 'dumbbell', tint: '#e54d2e', C: Treino },
   chat: { label: 'Chat', ic: 'chat', tint: '#0090ff', C: Chat },
+  mural: { label: 'Mural', ic: 'pin', tint: '#d6409f', C: Mural },
   meals: { label: 'Refeições', ic: 'meals', tint: '#f76b15', C: Meals },
   photos: { label: 'Fotos', ic: 'photos', tint: '#d6409f', C: Photos },
   radar: { label: 'Radar', ic: 'spark', tint: '#8e4ec6', C: RadarPagina },

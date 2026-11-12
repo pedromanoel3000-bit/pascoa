@@ -301,7 +301,7 @@ export function buscar(st, consulta, paginas = {}) {
         if ((i.conv === 'family' || String(i.conv).split('|').includes(st.me)) && contem(i.text, q)) out.push({ icone: '💬', titulo: i.text, sub: `Mensagem de ${nomes[i.createdBy] || ''}`, ir: 'chat', quando: i.createdAt })
         break
       case 'post':
-        if (contem(i.text, q)) out.push({ icone: '📌', titulo: i.text, sub: `Mural · ${nomes[i.createdBy] || ''}`, ir: 'home', quando: i.createdAt })
+        if (contem(i.text, q)) out.push({ icone: '📌', titulo: i.text, sub: `Mural · ${nomes[i.createdBy] || ''}`, ir: 'mural', quando: i.createdAt })
         break
     }
   }
