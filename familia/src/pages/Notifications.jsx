@@ -13,6 +13,7 @@ const CAT = {
   reminders: ['bell', '#f76b15'],
   lists: ['list', '#12a594'],
   posts: ['home', '#d6409f'],
+  radar: ['spark', '#8e4ec6'],
 }
 
 export const myNotifs = (st) =>

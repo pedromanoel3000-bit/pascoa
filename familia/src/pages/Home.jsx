@@ -7,6 +7,7 @@ import { toast, vibrate } from '../toast.jsx'
 import { PushBanner } from './PushSettings.jsx'
 import { abrirMagia } from './Magia.jsx'
 import CasaViva from './Casa.jsx'
+import Radar from './Radar.jsx'
 import { toggleTask } from './Tasks.jsx'
 import { SLOTS } from './Meals.jsx'
 import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
@@ -41,6 +42,8 @@ export default function Home() {
   return (
     <div className="page">
       <CasaViva saudacao={`${hello}, ${me.name}!`} data={`${WEEKDAYS_LONG[new Date().getDay()]}, ${fmtDate(day, { day: 'numeric', month: 'long' })}`} />
+
+      <Radar />
 
       <section className="hero hero-semana">
         <div className="week-strip">

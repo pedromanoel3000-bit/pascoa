@@ -677,3 +677,21 @@ input.tr-in { text-align: center; font-weight: 700; padding: 10px 4px; min-width
 @keyframes casa-balanco { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
 @keyframes casa-chuva { from { transform: translate(0, 0); } to { transform: translate(-46px, 140px); } }
 @media (prefers-reduced-motion: reduce) { .casa svg * { animation: none !important; } .casa-fumaca { opacity: .6; } }
+
+/* ---------- radar ---------- */
+.radar { display: flex; flex-direction: column; gap: 10px; border-color: color-mix(in srgb, var(--primary) 30%, var(--line)); }
+.radar-topo { display: flex; align-items: baseline; gap: 8px; }
+.radar-topo h3 { margin: 0; }
+.radar-pulso { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); align-self: center; box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 60%, transparent); animation: radar-pulso 2.2s ease-out infinite; }
+@keyframes radar-pulso { to { box-shadow: 0 0 0 9px transparent; } }
+.radar-aviso { display: flex; gap: 10px; align-items: flex-start; }
+.radar-aviso.menor { padding-top: 10px; border-top: 1px solid var(--line); }
+.radar-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--primary-soft); display: grid; place-items: center; font-size: 1.25rem; }
+.radar-aviso.menor .radar-ic { width: 32px; height: 32px; font-size: 1rem; border-radius: 10px; }
+.radar-aviso b { display: block; line-height: 1.25; }
+.radar-aviso p { margin: 2px 0 0; color: var(--muted); font-size: .92rem; line-height: 1.35; }
+.radar-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.radar-acoes .btn { padding: 6px 12px; font-size: .86rem; }
+.radar-x { flex: none; width: 30px; height: 30px; margin: -4px -6px 0 0; border-radius: 50%; color: var(--muted); font-size: 1.3rem; line-height: 1; display: grid; place-items: center; }
+.radar-mais { align-self: flex-start; color: var(--primary); font-weight: 700; font-size: .88rem; padding: 2px 0; }
+@media (prefers-reduced-motion: reduce) { .radar-pulso { animation: none; } }

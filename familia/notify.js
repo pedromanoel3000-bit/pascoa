@@ -2,17 +2,19 @@
 import crypto from 'node:crypto'
 import webpush from 'web-push'
 import { addDays, occursOn } from './src/utils.js'
+import { radar } from './src/radar.js'
 
 const ACTIVE_MS = 20_000 // aparelho com o app aberto agora não recebe aviso (ele já vê na tela)
 const LIST_BATCH_MS = 30_000 // junta vários itens de lista num aviso só
 const DEFAULT_TZ = 'America/Sao_Paulo'
 const MORNING = 8 * 60 // aniversários e eventos de dia inteiro: 8h
 const TASKS_TIME = 9 * 60 // tarefas do dia: 9h
+const RADAR_TIME = 19 * 60 + 30 // radar: um aviso por pessoa, 19h30
 const INBOX_MAX = 150
 // Tipos que nunca geram aviso (ex.: o treino de cada pessoa).
-const SEM_AVISO = new Set(['treinoPrograma', 'treinoSessao', 'treinoRascunho', 'treinoCardio']) // avisos guardados por pessoa no histórico do app
+const SEM_AVISO = new Set(['treinoPrograma', 'treinoSessao', 'treinoRascunho', 'treinoCardio', 'radarVisto', 'radarAviso']) // avisos guardados por pessoa no histórico do app
 
-export const CATEGORIES = ['chat', 'tasks', 'events', 'reminders', 'lists', 'posts']
+export const CATEGORIES = ['chat', 'tasks', 'events', 'reminders', 'lists', 'posts', 'radar']
 
 export function createNotifier({ families, loadFamily, putItem, getConfig, setConfig, familiesWithPush }) {
   const lastSeen = new Map() // dispositivo -> horário da última sincronização
@@ -208,6 +210,8 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
       }
     }
 
+    if (due(local, today, RADAR_TIME)) once(`radar:${key}:${today}`, () => radarPush(key, fam, local).catch((err) => console.error('Radar:', err.message)))
+
     if (due(local, today, TASKS_TIME)) {
       const byPerson = new Map()
       for (const t of items.filter((i) => i.type === 'task' && !i.done && i.assignee && i.due && i.due <= today)) {
@@ -216,6 +220,31 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
       for (const [person, titles] of byPerson) {
         once(`tasks:${person}:${today}`, () => notify(key, fam, [person], 'reminders', { title: `✅ ${titles.length} tarefa${titles.length > 1 ? 's' : ''} para hoje`, body: joinPt(titles), url: '/#tasks', tag: 'tasks-today' }))
       }
+    }
+  }
+
+  // Radar: o achado mais importante que a pessoa ainda não dispensou nem recebeu, uma vez por dia.
+  async function radarPush(key, fam, local) {
+    const comAviso = new Set(subs(fam).filter((s) => s.prefs?.radar !== false).map((s) => s.member))
+    if (!comAviso.size) return
+    const itens = Object.values(fam.items).filter((i) => !i.deleted)
+    let previsao = null
+    const lugar = members(fam).find((m) => m.shareLocation && m.location)?.location
+    if (lugar) {
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lugar.lat.toFixed(1)}&longitude=${lugar.lng.toFixed(1)}&daily=precipitation_probability_max&forecast_days=7&timezone=auto`, { signal: AbortSignal.timeout(6000) })
+        const d = r.ok ? (await r.json()).daily : null
+        if (d?.time) previsao = Object.fromEntries(d.time.map((dia, i) => [dia, d.precipitation_probability_max?.[i] ?? null]))
+      } catch {}
+    }
+    const corte = Date.now() - 90 * 86400000
+    for (const m of comAviso) {
+      if (fam.items[m]?.type !== 'member' || fam.items[m].deleted) continue
+      const avisados = Object.fromEntries(Object.entries(fam.items['radar-avisos-' + m]?.avisados || {}).filter(([, t]) => t > corte))
+      const [achado] = radar({ itens, eu: m, hoje: local.day, agoraMin: local.minutes, previsao, vistos: { ...(fam.items['radar-' + m]?.vistos || {}), ...avisados } })
+      if (!achado) continue
+      putItem(key, fam, { id: 'radar-avisos-' + m, type: 'radarAviso', avisados: { ...avisados, [achado.id]: Date.now() } })
+      notify(key, fam, [m], 'radar', { title: `${achado.icone} ${achado.titulo}`, body: achado.texto, url: '/#home', tag: 'radar' })
     }
   }
 
@@ -279,6 +308,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
     },
 
     _tick: tick, // para testes
+    _radar: radarPush,
   }
 }
 

@@ -5,6 +5,7 @@ export const PUSH_CATEGORIES = [
   ['chat', 'Mensagens do chat'],
   ['tasks', 'Tarefas para mim'],
   ['reminders', 'Lembretes: eventos, aniversários e tarefas do dia'],
+  ['radar', 'Radar: no máximo um aviso por dia do que merece atenção'],
   ['events', 'Eventos novos na agenda'],
   ['lists', 'Itens novos nas listas'],
   ['posts', 'Recados no mural'],

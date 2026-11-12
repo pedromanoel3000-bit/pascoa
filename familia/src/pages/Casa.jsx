@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { byId, list, useStore } from '../store.js'
 import { today } from '../utils.js'
 import { useMembers } from '../ui.jsx'
-import { astro, estadoDaCasa, tipoDeTempo } from '../casa.js'
+import { astro, estadoDaCasa } from '../casa.js'
+import { useClima } from '../clima.js'
 import { activeItems } from './Lists.jsx'
 import { unreadCount } from './Chat.jsx'
 
@@ -14,43 +15,6 @@ const CEU = {
 }
 const CEU_NUBLADO = { dia: ['#7f93a8', '#c3ced8'], amanhecer: ['#a39288', '#d6c7b8'], entardecer: ['#54486e', '#a6808a'], noite: ['#0b0d24', '#232a4a'] }
 const ESTRELAS = [[22, 22], [58, 48], [96, 18], [140, 40], [205, 16], [248, 44], [290, 22], [332, 52], [318, 12], [170, 10]]
-const CLIMA_KEY = 'nosso-lar-clima'
-
-// Previsão do tempo (Open-Meteo, gratuita). Só é consultada se alguém da família já compartilha a
-// localização na tela Localizar; a posição vai arredondada (cerca de 10 km) e fica 45 min em cache.
-function useClima(membros, eu) {
-  const [clima, setClima] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(CLIMA_KEY)) || null
-    } catch {
-      return null
-    }
-  })
-  const local = (eu?.shareLocation && eu.location) || membros.find((m) => m.shareLocation && m.location)?.location
-  const lat = local ? local.lat.toFixed(1) : null
-  const lng = local ? local.lng.toFixed(1) : null
-  useEffect(() => {
-    if (lat == null) return
-    if (clima && clima.lat === lat && clima.lng === lng && Date.now() - clima.at < 45 * 60000) return
-    let vivo = true
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!vivo || !j?.current) return
-        const novo = { at: Date.now(), lat, lng, tipo: tipoDeTempo(j.current.weather_code), temp: Math.round(j.current.temperature_2m) }
-        try {
-          localStorage.setItem(CLIMA_KEY, JSON.stringify(novo))
-        } catch {}
-        setClima(novo)
-      })
-      .catch(() => {})
-    return () => {
-      vivo = false
-    }
-  }, [lat, lng])
-  return lat != null && clima && Date.now() - clima.at < 3 * 3600000 ? clima : null
-}
-
 const Nuvem = ({ x, y, s = 1, cor = '#fff', op = 0.9, classe = '' }) => (
   <g className={'casa-nuvem ' + classe} opacity={op} fill={cor}>
     <g transform={`translate(${x} ${y}) scale(${s})`}>
