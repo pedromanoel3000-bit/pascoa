@@ -256,21 +256,33 @@ export function AnuncioTeste() {
   )
 }
 
-/** Aviso maior, em tela cheia, no máximo uma vez a cada 12 horas e só a partir do 2º dia de teste. */
+const JANELA_MS = 3 * 3600e3 // 3 avisos a cada 3 horas = um por hora
+const AVISOS = 3
+const vistos = () => {
+  try {
+    const l = JSON.parse(lerLocal(LIDO + '-tela') || '[]')
+    return Array.isArray(l) ? l.filter((t) => typeof t === 'number' && Date.now() - t < JANELA_MS) : []
+  } catch {
+    return []
+  }
+}
+
+/** Aviso maior, em tela cheia: 3 vezes a cada 3 horas (uma por hora) e só a partir do 2º dia de teste. */
 export function AnuncioTela() {
   const { billing: b } = useAuth()
   const [aberto, setAberto] = useState(false)
   const emTeste = !!b && b.estado === 'teste' && b.dias <= 6
   useEffect(() => {
-    if (!emTeste) return
-    const ultimo = Number(lerLocal(LIDO + '-tela')) || 0
-    if (Date.now() - ultimo < 12 * 3600e3) return
-    const t = setTimeout(() => setAberto(true), 30000)
+    if (!emTeste || aberto) return
+    const l = vistos()
+    // Espera 30 s depois de abrir o app e, no mínimo, 1 hora desde o último aviso: dá 3 por janela de 3 horas.
+    const espera = l.length ? Math.max(...l) + JANELA_MS / AVISOS - Date.now() : 0
+    const t = setTimeout(() => setAberto(true), Math.max(30000, espera))
     return () => clearTimeout(t)
-  }, [emTeste])
+  }, [emTeste, aberto])
   if (!aberto || !emTeste) return null
   const fechar = () => {
-    gravarLocal(LIDO + '-tela', String(Date.now()))
+    gravarLocal(LIDO + '-tela', JSON.stringify([...vistos(), Date.now()]))
     setAberto(false)
   }
   const ver = () => {
