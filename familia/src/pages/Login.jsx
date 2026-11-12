@@ -177,7 +177,11 @@ export default function Login({ motivo, intro, onVoltar, onFeito, embutido = fal
         </div>
       </form>
       <p className="muted small login-lgpd">
-        Ao continuar, você concorda com a{' '}
+        Ao continuar, você concorda com os{' '}
+        <a href="/termos" target="_blank" rel="noreferrer">
+          Termos de Uso
+        </a>{' '}
+        e a{' '}
         <a href="/privacidade" target="_blank" rel="noreferrer">
           Política de Privacidade
         </a>

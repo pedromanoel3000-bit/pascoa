@@ -301,6 +301,9 @@ function Welcome() {
         </form>
       )}
       <p className="muted small">
+        <a href="/termos" target="_blank" rel="noreferrer" className="link">
+          Termos de Uso
+        </a>{' · '}
         <a href="/privacidade" target="_blank" rel="noreferrer" className="link">
           Política de Privacidade
         </a>

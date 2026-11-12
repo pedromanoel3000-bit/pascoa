@@ -116,6 +116,8 @@ Variáveis do Render (todas opcionais):
 | `APP_URL` | O endereço do app, usado nos links dos e-mails. O Render já informa `RENDER_EXTERNAL_URL`, que serve se faltar. |
 | `REQUIRE_ACCOUNT` | **Ligado por padrão**: ninguém usa o app sem conta e não existe família aberta pelo código. Famílias antigas (abertas) passam a pedir login e a primeira conta que entra vira a dona. `0` volta ao modo antigo (só para desenvolvimento e testes). |
 | `CONTACT_EMAIL` | O e-mail de contato mostrado na Política de Privacidade (página `/privacidade`). Fica só no servidor, não no código. |
+| `COMPANY_NAME`, `COMPANY_CNPJ` | Razão social e CNPJ de quem opera o serviço, mostrados nos Termos de Uso (página `/termos`). Ficam só no servidor. |
+| `TERMOS_REVISADOS` | `1` depois que um advogado revisar os termos: some a faixa amarela de "versão para revisão". |
 | `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
 
 ## Assinatura (Asaas)
