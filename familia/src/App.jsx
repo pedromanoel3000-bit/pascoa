@@ -70,7 +70,7 @@ export default function App() {
   useEffect(() => {
     const c = brand || '#5b4bdb'
     document.documentElement.style.setProperty('--brand', c)
-    document.querySelector('meta[name=theme-color]')?.setAttribute('content', c)
+    if (!document.documentElement.dataset.tema) document.querySelector('meta[name=theme-color]')?.setAttribute('content', c)
   }, [brand])
   useEffect(() => {
     window.scrollTo(0, 0)

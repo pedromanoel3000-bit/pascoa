@@ -3,6 +3,7 @@ import { byId, exportBackup, getState, importBackup, remove, resetAll, save, set
 import { AVATARS, COLORS, resizeImage } from '../utils.js'
 import { Avatar, Field, Modal, PageHeader, useMembers } from '../ui.jsx'
 import { toast } from '../toast.jsx'
+import { aplicarTema, TEMAS, temaAtual } from '../tema.js'
 import PushSettings, { ServerWarning } from './PushSettings.jsx'
 
 export default function Settings() {
@@ -10,6 +11,7 @@ export default function Settings() {
   const members = useMembers()
   const family = byId(st, 'family')
   const [editing, setEditing] = useState(null)
+  const [tema, setTema] = useState(temaAtual)
   const [famName, setFamName] = useState(family?.name || '')
   const invite = `${location.origin}/  —  código: ${st.family}`
 
@@ -64,6 +66,24 @@ export default function Settings() {
             ))}
           </div>
         </Field>
+      </div>
+
+      <div className="card">
+        <h3>Aparência</h3>
+        <p className="muted small">Vale só para este aparelho.</p>
+        <div className="temas">
+          {TEMAS.map((t) => (
+            <button type="button" key={t.id} className={'tema-op' + (tema === t.id ? ' on' : '')} aria-pressed={tema === t.id} onClick={() => setTema(aplicarTema(t.id))}>
+              <span className="tema-amostra">
+                {t.cores.map((c, i) => (
+                  <i key={i} style={{ background: c }} />
+                ))}
+              </span>
+              <b>{t.nome}</b>
+              <small>{t.desc}</small>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card">
