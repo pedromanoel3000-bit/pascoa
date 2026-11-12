@@ -176,7 +176,7 @@ export function AvisoAssinatura() {
   if (!b) return null
   let texto = null
   let grave = false
-  if (b.estado === 'teste' && b.dias <= 7) texto = `Teste grátis: ${b.dias <= 1 ? 'termina hoje ou amanhã' : `faltam ${b.dias} dias`}.`
+  if (b.estado === 'teste' && b.dias <= 3) texto = `Teste grátis: ${b.dias <= 1 ? 'termina hoje ou amanhã' : `faltam ${b.dias} dias`}.`
   else if (b.estado === 'ativa' && b.assinatura === 'cancelada' && b.dias <= 7) texto = `Sua assinatura termina em ${b.dias <= 1 ? 'menos de 1 dia' : `${b.dias} dias`} e não renova.`
   else if (b.estado === 'leitura') {
     texto = `${b.plano ? 'Assinatura vencida' : 'Teste grátis encerrado'}: você só pode ver, não alterar. Bloqueio em ${data(b.bloqueioEm)}.`

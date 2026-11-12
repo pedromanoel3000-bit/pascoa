@@ -15,7 +15,7 @@ import { ajustarEscrita, podeVer, redigir } from './src/privacidade.js'
 import { createFotos, hashDe, idValido, MAX_ARQUIVO, tipoDe } from './fotos-server.js'
 import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
 import { AsaasError, createAsaas } from './asaas.js'
-import { createBilling, LEITURA_MS, PLANOS, TESTE_MS } from './billing.js'
+import { createBilling, LEITURA_MS, PLANOS, TESTE_DIAS } from './billing.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(ROOT, 'dist')
@@ -263,6 +263,7 @@ const bearer = (req) => (/^Bearer\s+(\S+)$/i.exec(req.headers.authorization || '
 const ASAAS_KEY = env('ASAAS_API_KEY')
 const WEBHOOK_TOKEN = env('ASAAS_WEBHOOK_TOKEN')
 const agora = () => Date.now() + (Number(env('TEST_TIME_OFFSET_MS')) || 0)
+const TESTE_DIAS_USADO = Math.max(1, Number(env('TRIAL_DAYS')) || TESTE_DIAS) // dias de teste grátis (padrão 7)
 const billing = createBilling({
   read: getConfig,
   write: putConfig,
@@ -270,6 +271,7 @@ const billing = createBilling({
   asaas: ASAAS_KEY ? createAsaas({ apiKey: ASAAS_KEY, baseUrl: env('ASAAS_URL') || undefined }) : null,
   gratis: env('BILLING_FREE_EMAILS').split(','),
   now: agora,
+  testeMs: TESTE_DIAS_USADO * 86400000,
 })
 
 const notifier = createNotifier({ families, loadFamily, putItem, getConfig, setConfig, familiesWithPush })
@@ -821,7 +823,7 @@ http
     if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/termos' && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
-      return res.end(termosHtml({ contato: env('CONTACT_EMAIL'), empresa: env('COMPANY_NAME'), cnpj: env('COMPANY_CNPJ'), revisado: ['1', 'true', 'sim'].includes(env('TERMOS_REVISADOS').toLowerCase()), precos: { mensal: PLANOS.mensal.valor, anual: PLANOS.anual.valor }, testeDias: TESTE_MS / 86400000, leituraDias: LEITURA_MS / 86400000 }))
+      return res.end(termosHtml({ contato: env('CONTACT_EMAIL'), empresa: env('COMPANY_NAME'), cnpj: env('COMPANY_CNPJ'), revisado: ['1', 'true', 'sim'].includes(env('TERMOS_REVISADOS').toLowerCase()), precos: { mensal: PLANOS.mensal.valor, anual: PLANOS.anual.valor }, testeDias: TESTE_DIAS_USADO, leituraDias: LEITURA_MS / 86400000 }))
     }
     if (url === '/privacidade' && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })

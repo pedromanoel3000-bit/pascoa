@@ -122,7 +122,7 @@ Variáveis do Render (todas opcionais):
 
 ## Assinatura (Asaas)
 
-Cada família protegida ganha **30 dias de teste grátis** (o teste é por conta: criar outra família não dá mais 30 dias). Depois: **R$ 9,90 por mês** ou **R$ 99,00 por ano**. Passou do período pago, a família fica **3 dias só em leitura** (vê tudo, não altera; o que a pessoa edita fica na fila do aparelho e sobe depois da renovação) e depois é **bloqueada**. Nada é apagado, e baixar os dados continua possível.
+Cada conta ganha **7 dias de teste grátis** (o teste é por conta: criar outra família não dá mais dias; muda com `TRIAL_DAYS`, só para contas novas). Depois: **R$ 9,90 por mês** ou **R$ 99,00 por ano**. Passou do período pago, a família fica **3 dias só em leitura** (vê tudo, não altera; o que a pessoa edita fica na fila do aparelho e sobe depois da renovação) e depois é **bloqueada**. Nada é apagado, e baixar os dados continua possível.
 
 A cobrança só liga com `ASAAS_API_KEY`; sem ela tudo é liberado. Famílias sem conta não são cobradas.
 
@@ -130,6 +130,7 @@ A cobrança só liga com `ASAAS_API_KEY`; sem ela tudo é liberado. Famílias se
 |---|---|
 | `ASAAS_API_KEY` | Chave de API do Asaas. Chave de teste (`$aact_hmlg_…`) usa o ambiente de testes; de produção (`$aact_prod_…`), o real. |
 | `ASAAS_WEBHOOK_TOKEN` | Senha dos avisos de pagamento (32 a 255 caracteres, sem espaços). A mesma que você cadastra no Asaas. |
+| `TRIAL_DAYS` | Dias de teste grátis das contas novas (padrão 7). Quem já começou o teste mantém o prazo que tinha. |
 | `BILLING_FREE_EMAILS` | E-mails (separados por vírgula) cujas famílias nunca são cobradas (a sua, por exemplo). |
 | `ASAAS_URL` | Opcional: troca o endereço da API. |
 

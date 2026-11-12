@@ -7,7 +7,8 @@ export const PLANOS = {
   anual: { id: 'anual', nome: 'Anual', valor: 99, ciclo: 'YEARLY', meses: 12, descricao: 'Nosso Lar - assinatura anual' },
 }
 const DIA = 86400_000
-export const TESTE_MS = 30 * DIA
+export const TESTE_DIAS = 7 // pode ser trocado no servidor com TRIAL_DAYS
+export const TESTE_MS = TESTE_DIAS * DIA
 export const LEITURA_MS = 3 * DIA
 
 // ---------- datas ----------
@@ -78,7 +79,7 @@ const falha = (code, status = 400, extra) => {
  * @param asaas       cliente do Asaas (ou null: sem cobrança)
  * @param gratis      e-mails de contas que nunca são cobradas
  */
-export function createBilling({ read, write, auth, asaas, gratis = [], now = Date.now }) {
+export function createBilling({ read, write, auth, asaas, gratis = [], now = Date.now, testeMs = TESTE_MS }) {
   const cache = new Map()
   const locks = new Map()
   const get = async (nome) => {
@@ -114,7 +115,7 @@ export function createBilling({ read, write, auth, asaas, gratis = [], now = Dat
         const atual = await get('bill-' + key)
         if (atual) return atual
         // O teste é por conta: abrir outra família não ganha outros 30 dias.
-        return put('bill-' + key, { trialEnd: await auth.trial(dono.id, TESTE_MS), at: now() })
+        return put('bill-' + key, { trialEnd: await auth.trial(dono.id, testeMs), at: now() })
       })
     }
     return { ...b, cortesia: livres.has(dono.email), dono }
