@@ -290,6 +290,11 @@ function Welcome() {
           <button type="button" className="btn ghost" onClick={() => setMode(null)}>Voltar</button>
         </form>
       )}
+      <p className="muted small">
+        <a href="/privacidade" target="_blank" rel="noreferrer" className="link">
+          Política de Privacidade
+        </a>
+      </p>
     </div>
   )
 }

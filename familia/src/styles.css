@@ -814,3 +814,5 @@ button.quick-btn { font: inherit; font-size: .78rem; font-weight: 700; }
 .conta-acoes { margin-top: 6px; }
 .switch-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; cursor: pointer; }
 .login-links .link, .welcome-actions .link { font-size: .92rem; margin: 0; color: var(--primary); }
+.login-lgpd { margin: 0; text-align: center; max-width: 420px; }
+.login-lgpd a { color: var(--primary); }

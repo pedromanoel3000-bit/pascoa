@@ -115,6 +115,7 @@ Variáveis do Render (todas opcionais):
 | `RESEND_API_KEY`, `EMAIL_FROM` | Liga o envio de e-mails (confirmar o e-mail e "Esqueci a senha"), pelo serviço Resend. `EMAIL_FROM` é o remetente, de um domínio verificado lá, ex.: `Nosso Lar <oi@seudominio.com.br>`. Com isso ligado, contas novas só entram depois de confirmar o e-mail. |
 | `APP_URL` | O endereço do app, usado nos links dos e-mails. O Render já informa `RENDER_EXTERNAL_URL`, que serve se faltar. |
 | `REQUIRE_ACCOUNT` | `1` para só deixar criar família quem estiver conectado. Famílias antigas continuam funcionando até serem protegidas. |
+| `CONTACT_EMAIL` | O e-mail de contato mostrado na Política de Privacidade (página `/privacidade`). Fica só no servidor, não no código. |
 | `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
 
 Os códigos das famílias novas têm 12 caracteres (`ABCD-EFGH-JKLM`). Os antigos (8) continuam valendo.

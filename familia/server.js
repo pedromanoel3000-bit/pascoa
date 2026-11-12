@@ -10,6 +10,7 @@ import net from 'node:net'
 import dns from 'node:dns/promises'
 import { receitaDeHtml } from './src/refeicoes.js'
 import { createNotifier } from './notify.js'
+import { privacidadeHtml } from './legal.js'
 import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -534,6 +535,10 @@ http
     if (url.startsWith('/api/auth/')) return handleAuth(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))
+    if (url === '/privacidade' && (req.method === 'GET' || req.method === 'HEAD')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
+      return res.end(privacidadeHtml({ contato: env('CONTACT_EMAIL') }))
+    }
     if (url === '/api/health') return handleHealth(res)
     if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res)
     json(res, 404, { error: 'not found' })

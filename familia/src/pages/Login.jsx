@@ -175,6 +175,13 @@ export default function Login({ motivo, intro, onVoltar, onFeito, embutido = fal
           )}
         </div>
       </form>
+      <p className="muted small login-lgpd">
+        Ao continuar, você concorda com a{' '}
+        <a href="/privacidade" target="_blank" rel="noreferrer">
+          Política de Privacidade
+        </a>
+        .
+      </p>
       {auth.token && !embutido && (
         <button type="button" className="btn ghost" onClick={() => sair()}>
           Sair de {auth.email} e usar outra conta
