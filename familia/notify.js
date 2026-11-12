@@ -12,7 +12,7 @@ const TASKS_TIME = 9 * 60 // tarefas do dia: 9h
 const RADAR_TIME = 19 * 60 + 30 // radar: um aviso por pessoa, 19h30
 const INBOX_MAX = 150
 // Tipos que nunca geram aviso (ex.: o treino de cada pessoa).
-const SEM_AVISO = new Set(['treinoPrograma', 'treinoSessao', 'treinoRascunho', 'treinoCardio', 'radarVisto', 'radarAviso']) // avisos guardados por pessoa no histórico do app
+const SEM_AVISO = new Set(['treinoPrograma', 'treinoSessao', 'treinoRascunho', 'treinoCardio', 'radarVisto', 'radarAviso', 'inicioPref']) // avisos guardados por pessoa no histórico do app
 
 export const CATEGORIES = ['chat', 'tasks', 'events', 'reminders', 'lists', 'posts', 'radar']
 

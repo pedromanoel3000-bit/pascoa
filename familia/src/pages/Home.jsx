@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
 import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, resizeImage, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
 import { Avatar, Empty, useMembers } from '../ui.jsx'
@@ -8,17 +8,11 @@ import { PushBanner } from './PushSettings.jsx'
 import { abrirMagia } from './Magia.jsx'
 import CasaViva from './Casa.jsx'
 import { RadarCartao } from './Radar.jsx'
+import Personalizar, { idInicio } from './Personalizar.jsx'
+import { ATALHOS, EM_GRADE, lerInicio } from '../inicio.js'
 import { toggleTask } from './Tasks.jsx'
 import { SLOTS } from './Meals.jsx'
 import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
-
-const QUICK = [
-  ['#calendar/new', 'calendar', 'Evento', '#3e63dd'],
-  ['#tasks/new', 'tasks', 'Tarefa', '#46a758'],
-  ['#lists/new', 'list', 'Compras', '#12a594'],
-  ['#chat', 'chat', 'Mensagem', '#0090ff'],
-  ['#budget/new', 'budget', 'Gasto', '#18794e'],
-]
 
 export default function Home() {
   const st = useStore()
@@ -39,12 +33,13 @@ export default function Home() {
   const hello = hour < 5 ? 'Boa noite' : hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
   const week = Array.from({ length: 7 }, (_, i) => addDays(day, i))
 
-  return (
-    <div className="page">
-      <CasaViva saudacao={`${hello}, ${me.name}!`} data={`${WEEKDAYS_LONG[new Date().getDay()]}, ${fmtDate(day, { day: 'numeric', month: 'long' })}`} />
+  const pref = lerInicio(byId(st, idInicio(st.me)))
+  const [personalizando, setPersonalizando] = useState(false)
 
-      <RadarCartao />
-
+  const blocos = {
+    casa: () => <CasaViva saudacao={`${hello}, ${me.name}!`} data={`${WEEKDAYS_LONG[new Date().getDay()]}, ${fmtDate(day, { day: 'numeric', month: 'long' })}`} />,
+    radar: () => <RadarCartao />,
+    semana: () => (
       <section className="hero hero-semana">
         <div className="week-strip">
           {week.map((d) => {
@@ -63,85 +58,132 @@ export default function Home() {
           })}
         </div>
       </section>
-
+    ),
+    magia: () => (
       <button type="button" className="magia-barra" onClick={() => abrirMagia()}>
         <Icon name="spark" />
         <span className="grow">Escreva ou fale: “dentista amanhã às 15h”</span>
         <Icon name="mic" size={20} />
       </button>
-
-      <PushBanner />
-      <Countdowns />
-
-      <div className="quick">
-        {QUICK.map(([href, ic, label, tint]) => (
-          <a key={label} href={href} className="quick-btn" style={{ '--t': tint }}>
-            <span className="tile-ic">
-              <Icon name={ic} />
-            </span>
-            {label}
+    ),
+    contagens: () => <Countdowns />,
+    atalhos: () =>
+      pref.atalhos.length > 0 && (
+        <div className="quick">
+          {pref.atalhos.map((a) => {
+            const [href, ic, label, tint] = ATALHOS[a]
+            const dentro = (
+              <>
+                <span className="tile-ic">
+                  <Icon name={ic} />
+                </span>
+                {label}
+              </>
+            )
+            return href === 'magia' ? (
+              <button type="button" key={a} className="quick-btn" style={{ '--t': tint }} onClick={() => abrirMagia()}>
+                {dentro}
+              </button>
+            ) : (
+              <a key={a} href={href} className="quick-btn" style={{ '--t': tint }}>
+                {dentro}
+              </a>
+            )
+          })}
+        </div>
+      ),
+    hoje: () => (
+      <section className="card dash-card">
+        <a href="#calendar" className="dash-head">
+          <h3>Hoje</h3>
+          <span className="muted small">Agenda ›</span>
+        </a>
+        {events.length ? (
+          events.slice(0, 5).map((e) => (
+            <div key={e.id} className="timeline" style={{ '--c': byId(st, e.members?.[0])?.color || (e.birthday ? '#ffb224' : 'var(--muted)') }}>
+              <b>{e.allDay ? 'Dia todo' : e.start}</b>
+              <span>{e.title}</span>
+            </div>
+          ))
+        ) : (
+          <p className="muted">Dia livre ✨</p>
+        )}
+        {meal.length > 0 && (
+          <a href="#meals" className="meal-today">
+            🍽️ {meal.map((m) => `${m.slot}: ${m.title}`).join(' · ')}
           </a>
+        )}
+      </section>
+    ),
+    compras: () => <ShoppingCard />,
+    tarefas: () => (
+      <section className="card dash-card">
+        <a href="#tasks" className="dash-head">
+          <h3>Minhas tarefas</h3>
+          <span className="muted small">Todas ›</span>
+        </a>
+        {myTasks.length ? (
+          myTasks.slice(0, 5).map((t) => (
+            <label key={t.id} className="mini-check">
+              <input
+                type="checkbox"
+                onChange={() => {
+                  vibrate()
+                  toggleTask(t, st.me)
+                  toast(`“${t.title}” concluída 🎉`)
+                }}
+              />
+              <span className="grow">{t.title}</span>
+              {t.due && <small className={t.due < day ? 'late' : 'muted'}>{fmtDate(t.due, { day: 'numeric', month: 'short' })}</small>}
+            </label>
+          ))
+        ) : (
+          <p className="muted">Tudo feito 🎉</p>
+        )}
+      </section>
+    ),
+    mural: () => (
+      <>
+        <h2 className="section-title">Mural da família</h2>
+        <Composer />
+        {posts.length === 0 && <Empty icon="📌" text="O mural está vazio. Escreva um recado ou poste uma foto para a família." />}
+        {posts.map((p) => (
+          <Post key={p.id} post={p} />
         ))}
-      </div>
+      </>
+    ),
+  }
 
-      <div className="dash">
-        <section className="card dash-card">
-          <a href="#calendar" className="dash-head">
-            <h3>Hoje</h3>
-            <span className="muted small">Agenda ›</span>
-          </a>
-          {events.length ? (
-            events.slice(0, 5).map((e) => (
-              <div key={e.id} className="timeline" style={{ '--c': byId(st, e.members?.[0])?.color || (e.birthday ? '#ffb224' : 'var(--muted)') }}>
-                <b>{e.allDay ? 'Dia todo' : e.start}</b>
-                <span>{e.title}</span>
-              </div>
-            ))
-          ) : (
-            <p className="muted">Dia livre ✨</p>
-          )}
-          {meal.length > 0 && (
-            <a href="#meals" className="meal-today">
-              🍽️ {meal.map((m) => `${m.slot}: ${m.title}`).join(' · ')}
-            </a>
-          )}
-        </section>
+  // Na ordem escolhida; os cartões Hoje, Compras e Tarefas que ficarem seguidos dividem a mesma grade.
+  const visiveis = pref.secoes.filter((s) => !pref.ocultas.includes(s))
+  const grupos = []
+  for (const s of visiveis) {
+    const ultimo = grupos[grupos.length - 1]
+    if (EM_GRADE.includes(s) && ultimo?.grade) ultimo.ids.push(s)
+    else grupos.push({ grade: EM_GRADE.includes(s), ids: [s] })
+  }
 
-        <ShoppingCard />
-
-        <section className="card dash-card">
-          <a href="#tasks" className="dash-head">
-            <h3>Minhas tarefas</h3>
-            <span className="muted small">Todas ›</span>
-          </a>
-          {myTasks.length ? (
-            myTasks.slice(0, 5).map((t) => (
-              <label key={t.id} className="mini-check">
-                <input
-                  type="checkbox"
-                  onChange={() => {
-                    vibrate()
-                    toggleTask(t, st.me)
-                    toast(`“${t.title}” concluída 🎉`)
-                  }}
-                />
-                <span className="grow">{t.title}</span>
-                {t.due && <small className={t.due < day ? 'late' : 'muted'}>{fmtDate(t.due, { day: 'numeric', month: 'short' })}</small>}
-              </label>
-            ))
-          ) : (
-            <p className="muted">Tudo feito 🎉</p>
-          )}
-        </section>
-      </div>
-
-      <h2 className="section-title">Mural da família</h2>
-      <Composer />
-
-      {posts.length === 0 && <Empty icon="📌" text="O mural está vazio. Escreva um recado ou poste uma foto para a família." />}
-      {posts.map((p) => (
-        <Post key={p.id} post={p} />
-      ))}
+  return (
+    <div className="page">
+      {grupos.map((g, i) =>
+        g.grade ? (
+          <div className="dash" key={g.ids.join()}>
+            {g.ids.map((s) => (
+              <Fragment key={s}>{blocos[s]()}</Fragment>
+            ))}
+          </div>
+        ) : (
+          <Fragment key={g.ids[0]}>
+            {blocos[g.ids[0]]()}
+            {i === 0 && <PushBanner />}
+          </Fragment>
+        )
+      )}
+      {grupos.length > 0 && !grupos[0].grade ? null : <PushBanner />}
+      <button type="button" className="pers-botao" onClick={() => setPersonalizando(true)}>
+        <Icon name="settings" size={18} /> Personalizar o Início
+      </button>
+      {personalizando && <Personalizar onClose={() => setPersonalizando(false)} />}
     </div>
   )
 }
