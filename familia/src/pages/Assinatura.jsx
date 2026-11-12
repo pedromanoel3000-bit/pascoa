@@ -52,7 +52,8 @@ export function PainelAssinatura({ family }) {
     carregar()
   }, [family])
   if (erro && !s) return <p className="late small">{erro}</p>
-  if (!s || s.estado === 'desligada') return null
+  if (!s) return null
+  if (s.estado === 'desligada') return s.role === 'owner' ? <p className="muted small">A cobrança ainda não está ligada neste servidor (falta cadastrar a chave do Asaas no Render). Enquanto isso, tudo fica liberado.</p> : null
   const dono = s.role === 'owner'
   const assinante = s.assinatura === 'ativa'
   const pagar = ['teste', 'leitura', 'bloqueada'].includes(s.estado) || (s.estado === 'ativa' && s.assinatura !== 'ativa')

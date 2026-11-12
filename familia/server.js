@@ -753,13 +753,16 @@ async function handlePush(req, res, action) {
 }
 
 // Diz onde os dados estão sendo guardados e se o banco responde (sem expor chaves).
+// Diz se a cobrança está ligada, sem mostrar chaves (ajuda a descobrir o que falta configurar).
+const infoCobranca = () => ({ cobranca: billing.enabled ? (String(ASAAS_KEY).includes('_hmlg_') ? 'sandbox' : 'producao') : 'desligada', webhook: billing.enabled ? !!WEBHOOK_TOKEN : undefined })
+
 async function handleHealth(res) {
-  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file', persistent: PERSISTENT, missing: MISSING })
+  if (!USE_DB) return json(res, 200, { ok: true, storage: 'file', persistent: PERSISTENT, missing: MISSING, ...infoCobranca() })
   const problem = keyProblem()
   if (problem) return json(res, 200, { ok: false, storage: 'supabase', db: problem, persistent: true })
   try {
     await sb('families?select=family&limit=1')
-    json(res, 200, { ok: true, storage: 'supabase', db: 'ok', persistent: true })
+    json(res, 200, { ok: true, storage: 'supabase', db: 'ok', persistent: true, ...infoCobranca() })
   } catch (err) {
     json(res, 200, { ok: false, storage: 'supabase', db: err.message.slice(0, 200), persistent: true })
   }
