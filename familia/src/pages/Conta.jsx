@@ -4,6 +4,7 @@ import { Field, Modal } from '../ui.jsx'
 import { toast } from '../toast.jsx'
 import { baixarMeusDados, excluirConta, gerenciar, infoFamilia, proteger, sair, trocarSenha, useAuth } from '../auth.js'
 import Login from './Login.jsx'
+import { PainelAssinatura } from './Assinatura.jsx'
 
 // Família → Conta e segurança: quem está conectado e quem pode entrar na família.
 export default function Conta() {
@@ -130,6 +131,12 @@ export default function Conta() {
               Sair da conta
             </button>
           </div>
+          {info?.protected && (
+            <>
+              <h4 className="conta-sub">Assinatura</h4>
+              <PainelAssinatura family={st.family} />
+            </>
+          )}
           <h4 className="conta-sub">Seus dados</h4>
           <p className="muted small">Você pode baixar o que o app guarda sobre você ou apagar a sua conta quando quiser.</p>
           <div className="row conta-acoes">

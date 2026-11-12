@@ -36,6 +36,7 @@ p, li { margin: 6px 0; } ul { padding-left: 20px; } a { color: var(--brand); } .
 <ul>
 <li><b>Conta:</b> seu e-mail e nome. Se você entra com e-mail e senha, a senha é guardada apenas de forma irreversível (nem nós conseguimos lê-la). Se entra com o Google, recebemos somente o seu <b>e-mail, nome</b> e um identificador da conta Google. Não acessamos seus e-mails, contatos, arquivos nem qualquer outro dado do Google.</li>
 <li><b>Dados da família</b> que você mesmo cadastra: eventos, tarefas, listas, mensagens, fotos, contatos, notas, receitas, refeições, gastos, desejos e presentes, e registros de treino.</li>
+<li><b>Assinatura e pagamento:</b> o CPF ou CNPJ informado por quem assina, usado apenas para emitir a cobrança, e o histórico de pagamentos da família. Os dados de cartão, Pix e boleto ficam com o Asaas (instituição de pagamento) e <b>nunca passam pelo Nosso Lar</b>.</li>
 <li><b>Localização:</b> somente se você ativar o compartilhamento na tela Localização. Ela fica visível aos membros da sua família e pode ser desligada a qualquer momento.</li>
 <li><b>Dados técnicos:</b> o nome do navegador (para identificar suas sessões de acesso), o cadastro do aparelho para receber notificações, e o endereço de rede (IP), usado apenas na hora para limitar tentativas de acesso abusivas.</li>
 </ul>
@@ -54,7 +55,7 @@ p, li { margin: 6px 0; } ul { padding-left: 20px; } a { color: var(--brand); } .
 <h2>4. Quem vê seus dados</h2>
 <ul>
 <li><b>Sua família:</b> os membros da sua família veem os dados cadastrados nela. Famílias protegidas só abrem para contas autorizadas pelo dono.</li>
-<li><b>Serviços que fazem o app funcionar:</b> hospedagem do servidor (Render), banco de dados (Supabase), login (Google, se você escolher esse caminho), envio de e-mails (Resend, quando ativado), previsão do tempo (Open-Meteo, que recebe apenas uma posição aproximada, de cerca de 10 km, e só se a localização estiver compartilhada) e os serviços de notificação do seu navegador ou celular (Apple, Google, Mozilla).</li>
+<li><b>Serviços que fazem o app funcionar:</b> hospedagem do servidor (Render), banco de dados (Supabase), pagamentos (Asaas), login (Google, se você escolher esse caminho), envio de e-mails (Resend, quando ativado), previsão do tempo (Open-Meteo, que recebe apenas uma posição aproximada, de cerca de 10 km, e só se a localização estiver compartilhada) e os serviços de notificação do seu navegador ou celular (Apple, Google, Mozilla).</li>
 <li>Ao importar uma receita por link, o servidor acessa o endereço que você informou para ler a receita.</li>
 </ul>
 <p>Não compartilhamos seus dados com terceiros para outros fins, salvo obrigação legal.</p>

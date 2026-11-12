@@ -821,3 +821,19 @@ button.quick-btn { font: inherit; font-size: .78rem; font-weight: 700; }
 @keyframes foto-brilho { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .foto-carregando { animation: none; } }
 img.foto-carregando:not([src]) { visibility: visible; }
+
+/* ---------- assinatura ---------- */
+.assin { display: flex; flex-direction: column; gap: 10px; }
+.assin p { margin: 0; }
+.assin-estado { padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); font-weight: 600; line-height: 1.4; }
+.assin-estado.leitura { background: color-mix(in srgb, #f76b15 18%, var(--card)); }
+.assin-estado.bloqueada { background: color-mix(in srgb, var(--danger) 16%, var(--card)); }
+.assin-estado.ativa, .assin-estado.cortesia { background: color-mix(in srgb, var(--pos) 14%, var(--card)); }
+.assin-planos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.assin-plano { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
+.assin-plano b { font-size: 1.05rem; }
+.assin-plano .btn { margin-top: auto; align-self: stretch; }
+.assin-acoes { margin-top: 2px; }
+.assin-faixa { display: block; padding: 8px 14px; font-size: .9rem; text-align: center; background: color-mix(in srgb, #ffb224 24%, var(--card)); color: var(--text); }
+.assin-faixa.grave { background: color-mix(in srgb, var(--danger) 18%, var(--card)); }
+@media (max-width: 380px) { .assin-planos { grid-template-columns: 1fr; } }

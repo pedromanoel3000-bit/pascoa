@@ -1,7 +1,7 @@
 // Dados do app: ficam salvos no aparelho e sincronizam com o servidor da família.
 // Cada registro é { id, type, updatedAt, deleted?, ...campos }.
 import { useSyncExternalStore } from 'react'
-import { authHeader, clearNeed, onSyncDenied, vincularMembro } from './auth.js'
+import { authHeader, clearNeed, onSyncDenied, setBilling, vincularMembro } from './auth.js'
 import { podeVer, redigir } from './privacidade.js'
 
 const KEY = 'nosso-lar-v1'
@@ -177,7 +177,7 @@ export async function syncNow() {
       headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify({ family: state.family, since: state.rev, epoch: state.epoch, changes: sent, me: state.me, device: document.hidden ? null : state.device, create: state.criando || undefined }),
     })
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401 || res.status === 402 || res.status === 403) {
       // A família é protegida: o app pede login (ou entra sozinho, se já estiver conectado e puder).
       const entrou = await onSyncDenied(res.status, await res.json().catch(() => ({})), state.family)
       denied = !entrou
@@ -212,10 +212,12 @@ export async function syncNow() {
     }
     // Só tira da fila o que não mudou de novo enquanto a requisição estava no ar.
     const pending = pending0
-    for (const s of sent) if (pending[s.id] && pending[s.id].updatedAt === s.updatedAt) delete pending[s.id]
+    // Em modo só leitura (assinatura vencida) o servidor não grava nada: as alterações continuam na fila até a renovação.
+    if (!data.somenteLeitura) for (const s of sent) if (pending[s.id] && pending[s.id].updatedAt === s.updatedAt) delete pending[s.id]
     const meuMembro = data.acct?.member
     setState({ items, pending, rev: data.rev, epoch: data.epoch, criando: false, ...(!state.me && meuMembro && items[meuMembro] ? { me: meuMembro } : {}) })
     clearNeed()
+    setBilling(data.billing || null)
     setStatus('online')
   } catch {
     setStatus(navigator.onLine ? 'error' : 'offline')

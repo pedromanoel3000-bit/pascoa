@@ -118,6 +118,21 @@ Variáveis do Render (todas opcionais):
 | `CONTACT_EMAIL` | O e-mail de contato mostrado na Política de Privacidade (página `/privacidade`). Fica só no servidor, não no código. |
 | `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
 
+## Assinatura (Asaas)
+
+Cada família protegida ganha **30 dias de teste grátis** (o teste é por conta: criar outra família não dá mais 30 dias). Depois: **R$ 9,90 por mês** ou **R$ 99,00 por ano**. Passou do período pago, a família fica **3 dias só em leitura** (vê tudo, não altera; o que a pessoa edita fica na fila do aparelho e sobe depois da renovação) e depois é **bloqueada**. Nada é apagado, e baixar os dados continua possível.
+
+A cobrança só liga com `ASAAS_API_KEY`; sem ela tudo é liberado. Famílias sem conta não são cobradas.
+
+| Variável | Para quê |
+|---|---|
+| `ASAAS_API_KEY` | Chave de API do Asaas. Chave de teste (`$aact_hmlg_…`) usa o ambiente de testes; de produção (`$aact_prod_…`), o real. |
+| `ASAAS_WEBHOOK_TOKEN` | Senha dos avisos de pagamento (32 a 255 caracteres, sem espaços). A mesma que você cadastra no Asaas. |
+| `BILLING_FREE_EMAILS` | E-mails (separados por vírgula) cujas famílias nunca são cobradas (a sua, por exemplo). |
+| `ASAAS_URL` | Opcional: troca o endereço da API. |
+
+No Asaas: **Integrações → Webhooks**, cadastre `https://SEU-APP/api/billing/webhook`, o mesmo token e os eventos de cobrança (pagamento confirmado e recebido, estornado, e assinatura removida). Cada assinatura é criada com forma de pagamento "perguntar ao cliente": o Asaas manda a cobrança de cada período por e-mail e a pessoa paga por Pix, boleto ou cartão. Se um aviso se perder, o botão "Já paguei, atualizar" (Conta e segurança) confere os pagamentos direto no Asaas.
+
 **Dados e exclusão:** em Família → Conta e segurança há “Baixar meus dados” e “Excluir minha conta”. Membros escolhem se o que cadastraram sai junto; o dono precisa antes passar a propriedade (“Tornar dono”) ou, se for a única conta, apagar a família inteira. A mesma conta de e-mail pode ser criada de novo depois, do zero.
 
 **Privacidade entre as pessoas da família (só em família protegida):** o servidor entrega a cada conta apenas o que é dela. O treino (programa, sessões, rascunho), as preferências do radar e do início e as notificações de cada pessoa, e as conversas privadas só chegam ao aparelho de quem pode vê-las; o dono de um desejo não vê quem o reservou (e a reserva é mantida quando ele edita o desejo). Ninguém consegue alterar o que é de outra pessoa, mesmo mudando o app. Cada conta fica ligada a um membro (o servidor faz isso sozinho no primeiro acesso) e os aparelhos apagam as cópias de dados de outras pessoas que tinham antes da proteção. Em família sem conta ninguém é identificado, então tudo continua visível a todos, como antes.

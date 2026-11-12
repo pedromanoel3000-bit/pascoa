@@ -14,6 +14,8 @@ import { privacidadeHtml } from './legal.js'
 import { ajustarEscrita, podeVer, redigir } from './src/privacidade.js'
 import { createFotos, hashDe, idValido, MAX_ARQUIVO, tipoDe } from './fotos-server.js'
 import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
+import { AsaasError, createAsaas } from './asaas.js'
+import { createBilling } from './billing.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(ROOT, 'dist')
@@ -256,6 +258,20 @@ const clientIp = (req) => {
 }
 const bearer = (req) => (/^Bearer\s+(\S+)$/i.exec(req.headers.authorization || '') || [])[1] || ''
 
+// ---------- assinatura (Asaas) ----------
+// Sem ASAAS_API_KEY não há cobrança: tudo fica liberado, como antes. TEST_TIME_OFFSET_MS existe só para testes.
+const ASAAS_KEY = env('ASAAS_API_KEY')
+const WEBHOOK_TOKEN = env('ASAAS_WEBHOOK_TOKEN')
+const agora = () => Date.now() + (Number(env('TEST_TIME_OFFSET_MS')) || 0)
+const billing = createBilling({
+  read: getConfig,
+  write: putConfig,
+  auth: authSvc,
+  asaas: ASAAS_KEY ? createAsaas({ apiKey: ASAAS_KEY, baseUrl: env('ASAAS_URL') || undefined }) : null,
+  gratis: env('BILLING_FREE_EMAILS').split(','),
+  now: agora,
+})
+
 const notifier = createNotifier({ families, loadFamily, putItem, getConfig, setConfig, familiesWithPush })
 
 // ---------- HTTP ----------
@@ -281,7 +297,7 @@ function json(res, status, body) {
 }
 
 // Confere o código da família e se este pedido pode usá-la (famílias protegidas só abrem para contas autorizadas).
-async function checkFamily(req, res, rawCode, { create = false, me = null, needExisting = false } = {}) {
+async function checkFamily(req, res, rawCode, { create = false, me = null, needExisting = false, cobrar = true } = {}) {
   const code = String(rawCode || '').trim().toUpperCase()
   if (!/^[A-Z0-9-]{6,40}$/.test(code)) {
     json(res, 400, { error: 'invalid family code' })
@@ -294,6 +310,18 @@ async function checkFamily(req, res, rawCode, { create = false, me = null, needE
     if (!gate.ok) {
       json(res, gate.status, { error: gate.error, reason: gate.reason, canJoin: gate.canJoin, removed: gate.removed })
       return null
+    }
+    // Assinatura: teste e período pago liberam tudo; vencida, só leitura por 3 dias e depois bloqueada.
+    if (billing.enabled && gate.account && cobrar) {
+      const c = await billing.avaliar(key)
+      if (c) {
+        gate.cobranca = c.resumo
+        if (c.est.estado === 'bloqueada') {
+          json(res, 402, { error: 'payment_required', billing: c.resumo })
+          return null
+        }
+        if (c.est.estado === 'leitura') gate.readOnly = true
+      }
     }
     if (needExisting && fam.rev === 0) {
       json(res, 404, { error: 'family not found' })
@@ -480,12 +508,83 @@ async function handleSync(req, res) {
   const items = Object.values(fam.items)
     .filter((i) => i.rev > since && !PRIVATE_TYPES.has(i.type) && (!protegida || podeVer(i, yo)))
     .map((i) => (protegida ? redigir(i, yo) : i))
-  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items, acct: protegida ? { role: gate.role, member: yo || null } : undefined })
+  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items, acct: protegida ? { role: gate.role, member: yo || null } : undefined, billing: gate.cobranca, somenteLeitura: gate.readOnly || undefined })
   // Avisa a família depois de responder, para não atrasar a sincronização.
   if (events.length && body.me) notifier.onChanges(key, fam, body.me, body.device, events)
   // Foto que deixou de ser citada por qualquer item (apagada, trocada) sai do armazenamento.
   const soltas = events.flatMap(([antes, depois]) => (antes ? idsDeFotos(antes).filter((id) => !idsDeFotos(depois).includes(id)) : []))
   if (soltas.length) limparFotosSemUso(key, fam, soltas).catch(() => {})
+}
+
+// ---------- /api/billing/* ----------
+const BILLING_MSG = {
+  invalid_plan: 'Plano inválido.',
+  invalid_cpf: 'CPF ou CNPJ inválido. Confira os números.',
+  courtesy: 'Esta família não é cobrada.',
+  already_subscribed: 'Você já tem uma assinatura de outro plano. Cancele a renovação antes de trocar.',
+  no_invoice: 'Criei a assinatura, mas o Asaas ainda não gerou a cobrança. Tente de novo em instantes.',
+  no_subscription: 'Não há assinatura ativa para cancelar.',
+  billing_off: 'A cobrança ainda não está ligada neste servidor.',
+  not_owner: 'Só o dono da família pode fazer isso.',
+}
+
+const mesmoToken = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
+
+async function handleBilling(req, res, action) {
+  if (req.method !== 'POST') return json(res, 404, { error: 'not found' })
+  if (action === 'webhook') {
+    // O Asaas manda o token combinado no cabeçalho asaas-access-token (não há assinatura do conteúdo).
+    if (!billing.enabled || !WEBHOOK_TOKEN) return json(res, 503, { error: 'webhook off' })
+    if (!mesmoToken(String(req.headers['asaas-access-token'] || ''), WEBHOOK_TOKEN)) return json(res, 401, { error: 'invalid token' })
+    let corpo
+    try {
+      corpo = JSON.parse((await readBody(req, 512 * 1024)) || '{}')
+    } catch {
+      return json(res, 400, { error: 'invalid body' })
+    }
+    try {
+      json(res, 200, { ok: true, resultado: await billing.webhook(corpo) })
+    } catch (err) {
+      console.error('Falha ao processar aviso do Asaas:', err.message)
+      json(res, 500, { error: 'server error' }) // o Asaas tenta de novo
+    }
+    return
+  }
+  let body
+  try {
+    body = JSON.parse((await readBody(req, 64 * 1024)) || '{}')
+  } catch {
+    return json(res, 400, { error: 'invalid body' })
+  }
+  try {
+    const acct = await authSvc.session(bearer(req))
+    if (!acct) return json(res, 401, { error: 'invalid_session' })
+    const code = String(body.family || '').trim().toUpperCase()
+    if (!/^[A-Z0-9-]{6,40}$/.test(code)) return json(res, 400, { error: 'invalid family code' })
+    const key = keyFor(code)
+    const info = await authSvc.info(acct, key) // só quem é da família
+    if (!billing.enabled) return json(res, 200, { estado: 'desligada', role: info.role })
+    if (action === 'status') {
+      if (body.refresh === true && info.role === 'owner') await billing.sincronizar(key).catch((err) => console.error('Falha ao conferir pagamentos:', err.message))
+      const c = await billing.avaliar(key)
+      return json(res, 200, { ...c.resumo, role: info.role })
+    }
+    if (info.role !== 'owner') throw new AuthError('not_owner', 403)
+    if (action === 'checkout') return json(res, 200, await billing.checkout(key, { plano: body.plano, cpfCnpj: body.cpfCnpj }))
+    if (action === 'cancel') {
+      await billing.cancelar(key)
+      return json(res, 200, { ...(await billing.avaliar(key)).resumo, role: info.role })
+    }
+    json(res, 404, { error: 'not found' })
+  } catch (err) {
+    if (err instanceof AuthError) return json(res, err.status, { error: err.code, message: BILLING_MSG[err.code] || AUTH_MSG[err.code], ...err.extra })
+    if (err instanceof AsaasError) {
+      console.error('Asaas:', err.status, err.message)
+      return json(res, 502, { error: 'asaas_error', message: err.message })
+    }
+    console.error('Falha em /api/billing/' + action + ':', err.message)
+    json(res, 500, { error: 'server error' })
+  }
 }
 
 // ---------- /api/auth/* ----------
@@ -694,10 +793,25 @@ function serveStatic(req, res) {
   fs.createReadStream(file).pipe(res)
 }
 
+// Ao desligar (a cada deploy do Render, por exemplo), grava o que ainda estava esperando os 300 ms de espera.
+async function gravarTudo() {
+  for (const key of saveTimers.keys()) {
+    clearTimeout(saveTimers.get(key))
+    try {
+      if (USE_DB) await dbFlush(key)
+      else if (families.has(key)) fileSave(key)
+    } catch (err) {
+      console.error('Falha ao gravar ao desligar:', err.message)
+    }
+  }
+}
+for (const sinal of ['SIGTERM', 'SIGINT']) process.on(sinal, () => Promise.race([gravarTudo(), new Promise((r) => setTimeout(r, 4000))]).finally(() => process.exit(0)))
+
 http
   .createServer((req, res) => {
     const url = req.url.split('?')[0]
     if (url === '/api/sync' && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
+    if (url.startsWith('/api/billing/')) return handleBilling(req, res, url.slice(13)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/foto/')) return handleFoto(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/auth/')) return handleAuth(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
@@ -718,5 +832,7 @@ http
     notifier.start()
     if (authSvc.config().requireAccount) console.log('Contas obrigatórias: só se cria família com e-mail e senha ou Google.')
     if (GOOGLE_ID) console.log('Login com Google ligado.')
+    if (billing.enabled) console.log('Cobrança ligada (Asaas ' + (String(ASAAS_KEY).includes('_hmlg_') ? 'sandbox' : 'produção') + ').')
+    if (billing.enabled && !WEBHOOK_TOKEN) console.warn('ATENÇÃO: falta ASAAS_WEBHOOK_TOKEN. Sem ele os avisos de pagamento do Asaas são recusados; pagamentos só entram quando o dono toca em "Já paguei".')
     if (mailer && !APP_URL) console.warn('ATENÇÃO: RESEND_API_KEY definido, mas falta APP_URL (o endereço do app). Verificação e recuperação por e-mail ficam desligadas.')
   })

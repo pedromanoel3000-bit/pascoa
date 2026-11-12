@@ -431,6 +431,19 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
     dropFamilyAuth: (key) => lock('fam-' + key, () => put('fam-' + key, null)),
     eraseAccount: (a) => lock(acctName(a.id), () => put(acctName(a.id), null)), // as sessões deixam de valer junto
 
+    // ---------- apoio à cobrança ----------
+    accountById: (id) => get(acctName(id)),
+    /** Início do teste grátis da conta: definido uma vez só, na primeira vez em que a conta precisa dele. */
+    trial: (id, ms) =>
+      lock(acctName(id), async () => {
+        const cur = await get(acctName(id))
+        if (!cur) return null
+        if (cur.trialEnd) return cur.trialEnd
+        const fim = Date.now() + ms
+        await put(acctName(id), { ...cur, trialEnd: fim })
+        return fim
+      }),
+
     sweep: () => limiter.sweep(),
   }
   return api

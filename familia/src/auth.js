@@ -12,11 +12,12 @@ const lerSalvo = () => {
   }
 }
 let saved = lerSalvo() // { token, email, name, hasPassword }
-let need = null // { reason } quando o servidor pede login
+let need = null // { reason, billing } quando o servidor pede login ou pagamento
+let billing = null // situação da assinatura, vinda da sincronização
 let snap
 const listeners = new Set()
 const refresh = () => {
-  snap = { token: saved.token || null, email: saved.email || '', name: saved.name || '', hasPassword: !!saved.hasPassword, need }
+  snap = { token: saved.token || null, email: saved.email || '', name: saved.name || '', hasPassword: !!saved.hasPassword, need, billing }
 }
 refresh()
 const emit = () => {
@@ -39,10 +40,10 @@ function guardar(v) {
 // Avisa o resto do app (a sincronização tenta de novo na hora).
 const aviso = () => window.dispatchEvent(new Event('nosso-lar-auth'))
 
-export async function api(path, body, method = 'POST') {
+export async function api(path, body, method = 'POST', base = '/api/auth/') {
   let res
   try {
-    res = await fetch('/api/auth/' + path, { method, headers: { 'Content-Type': 'application/json', ...authHeader() }, body: method === 'GET' ? undefined : JSON.stringify(body || {}) })
+    res = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', ...authHeader() }, body: method === 'GET' ? undefined : JSON.stringify(body || {}) })
   } catch {
     throw Object.assign(new Error('Sem conexão com o servidor. Tente de novo.'), { code: 'network' })
   }
@@ -99,6 +100,19 @@ export async function excluirConta(body) {
   aviso()
   return j
 }
+// ---------- assinatura ----------
+export const setBilling = (b) => {
+  if (JSON.stringify(b) !== JSON.stringify(billing)) {
+    billing = b
+    emit()
+  }
+}
+const cob = (path, body) => api(path, body, 'POST', '/api/billing/')
+export const cobStatus = (family, refresh = false) => cob('status', { family, refresh })
+export const cobCheckout = (family, plano, cpfCnpj) => cob('checkout', { family, plano, cpfCnpj })
+export const cobCancelar = (family) => cob('cancel', { family })
+export const recarregar = aviso // pede à sincronização que tente de novo agora
+
 export const infoFamilia = (family) => api('info', { family })
 export const proteger = (family, member) => api('claim', { family, member })
 export const gerenciar = (family, body) => api('manage', { family, ...body })
@@ -111,12 +125,13 @@ export const clearNeed = () => {
     emit()
   }
 }
-const setNeed = (reason) => {
-  need = { reason }
+const setNeed = (reason, billingInfo) => {
+  need = { reason, billing: billingInfo || null }
   emit()
 }
 let jaTentou = ''
 export async function onSyncDenied(status, j, code) {
+  if (status === 402) return setNeed('payment', j.billing) // assinatura vencida e bloqueada
   if (status === 401) {
     if (saved.token && j.reason === 'session') guardar({}) // a sessão expirou ou foi derrubada
     return setNeed(j.reason || 'protected')

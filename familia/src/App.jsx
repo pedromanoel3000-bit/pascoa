@@ -21,6 +21,7 @@ import Treino from './pages/Treino.jsx'
 import Magia from './pages/Magia.jsx'
 import RadarPagina from './pages/Radar.jsx'
 import Login from './pages/Login.jsx'
+import { AvisoAssinatura, TelaBloqueada } from './pages/Assinatura.jsx'
 import { loadConfig, sair, useAuth } from './auth.js'
 import { migrar } from './fotos.jsx'
 import Mural from './pages/Mural.jsx'
@@ -128,6 +129,7 @@ export default function App() {
   }
   if (link) return <Login modoInicial={link.modo} token={link.token} onVoltar={fecharLink} onFeito={fecharLink} />
   if (!st.family) return <Welcome />
+  if (auth.need?.reason === 'payment') return <TelaBloqueada />
   if (auth.need) return <Login motivo={auth.need.reason} onVoltar={() => resetAll()} />
   if (!me) return <PickMe />
 
@@ -165,6 +167,7 @@ export default function App() {
             <Avatar member={me} size={32} />
           </a>
         </div>
+        <AvisoAssinatura />
         <Page key={page} />
       </main>
       {magia && <Magia paginas={PAGES} textoInicial={magia.texto} onClose={() => setMagia(null)} />}
