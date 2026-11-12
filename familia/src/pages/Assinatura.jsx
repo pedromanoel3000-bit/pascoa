@@ -189,3 +189,118 @@ export function AvisoAssinatura() {
     </a>
   )
 }
+
+// ---------- anúncios durante o teste grátis ----------
+const LIDO = 'nl-anuncio-visto'
+const lerLocal = (k) => {
+  try {
+    return localStorage.getItem(k)
+  } catch {
+    return null
+  }
+}
+const gravarLocal = (k, v) => {
+  try {
+    localStorage.setItem(k, v)
+  } catch {}
+}
+
+/** Frases do "anúncio", com os preços e os dias que faltam. */
+function frasesDoAnuncio(b) {
+  const p = b.precos
+  const falta = b.dias <= 1 ? 'Seu teste grátis termina hoje ou amanhã.' : `Faltam ${b.dias} dias de teste grátis.`
+  const lista = [
+    { t: 'Gostando do Nosso Lar?', d: 'Assine e a família inteira continua com tudo organizado: agenda, listas, receitas, fotos e recados.' },
+    { t: `Só ${reais(p.mensal)} por mês`, d: 'Um único plano para toda a família. Pague por Pix, boleto ou cartão e cancele quando quiser.' },
+    { t: `Plano anual: ${reais(p.anual)}`, d: `Equivale a ${reais(p.anual / 12)} por mês. Você economiza ${reais(p.mensal * 12 - p.anual)} por ano.` },
+    { t: 'Não perca nada', d: 'Suas fotos, listas, receitas e recados continuam guardados. Assine e siga de onde parou.' },
+    { t: 'Sem pagar nada agora', d: `A primeira cobrança só vence em ${data(b.fim)}, quando o teste grátis acaba.` },
+  ]
+  if (b.dias <= 3) lista.unshift({ t: falta, d: 'Assine antes do fim para não ficar só com leitura.' })
+  return lista
+}
+
+/** Cartão de anúncio na tela inicial, só durante o teste grátis. Troca de mensagem sozinho e pode ser fechado. */
+export function AnuncioTeste() {
+  const { billing: b } = useAuth()
+  const [i, setI] = useState(() => Math.floor(Math.random() * 5))
+  const [fechado, setFechado] = useState(() => lerLocal(LIDO + '-card') === new Date().toDateString())
+  const frases = b && b.estado === 'teste' ? frasesDoAnuncio(b) : []
+  useEffect(() => {
+    if (fechado || frases.length < 2) return
+    const t = setInterval(() => setI((n) => n + 1), 9000)
+    return () => clearInterval(t)
+  }, [fechado, frases.length])
+  if (!frases.length || fechado) return null
+  const f = frases[i % frases.length]
+  return (
+    <aside className="anuncio" aria-label="Oferta de assinatura">
+      <span className="anuncio-tag">Oferta</span>
+      <button
+        type="button"
+        className="anuncio-x"
+        aria-label="Fechar anúncio"
+        onClick={() => {
+          gravarLocal(LIDO + '-card', new Date().toDateString())
+          setFechado(true)
+        }}
+      >
+        ✕
+      </button>
+      <b key={i} className="anuncio-t">{f.t}</b>
+      <p key={'d' + i} className="anuncio-d">{f.d}</p>
+      <a href="#settings" className="btn primary anuncio-btn">
+        Ver planos
+      </a>
+    </aside>
+  )
+}
+
+/** Aviso maior, em tela cheia, no máximo uma vez a cada 12 horas e só a partir do 2º dia de teste. */
+export function AnuncioTela() {
+  const { billing: b } = useAuth()
+  const [aberto, setAberto] = useState(false)
+  const emTeste = !!b && b.estado === 'teste' && b.dias <= 6
+  useEffect(() => {
+    if (!emTeste) return
+    const ultimo = Number(lerLocal(LIDO + '-tela')) || 0
+    if (Date.now() - ultimo < 12 * 3600e3) return
+    const t = setTimeout(() => setAberto(true), 30000)
+    return () => clearTimeout(t)
+  }, [emTeste])
+  if (!aberto || !emTeste) return null
+  const fechar = () => {
+    gravarLocal(LIDO + '-tela', String(Date.now()))
+    setAberto(false)
+  }
+  const ver = () => {
+    fechar()
+    location.hash = '#settings'
+  }
+  return (
+    <Modal title="Continue com o Nosso Lar" onClose={fechar}>
+      <div className="anuncio-tela">
+        <img src="/icon.svg" alt="" className="welcome-logo" />
+        <h3>{b.dias <= 1 ? 'Seu teste grátis termina hoje ou amanhã' : `Faltam ${b.dias} dias de teste grátis`}</h3>
+        <p className="muted">Assine para a família continuar com agenda, listas, receitas, fotos e recados no mesmo lugar. Nada do que vocês guardaram se perde.</p>
+        <div className="anuncio-planos">
+          <button type="button" className="assin-plano" onClick={ver}>
+            <b>Mensal</b>
+            <span>{reais(b.precos.mensal)} por mês</span>
+          </button>
+          <button type="button" className="assin-plano destaque" onClick={ver}>
+            <b>Anual</b>
+            <span>{reais(b.precos.anual)} por ano</span>
+            <small>Economize {reais(b.precos.mensal * 12 - b.precos.anual)}</small>
+          </button>
+        </div>
+        <button type="button" className="btn primary" onClick={ver}>
+          Ver planos
+        </button>
+        <button type="button" className="btn ghost" onClick={fechar}>
+          Agora não
+        </button>
+      </div>
+    </Modal>
+  )
+}

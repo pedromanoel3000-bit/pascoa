@@ -21,7 +21,7 @@ import Treino from './pages/Treino.jsx'
 import Magia from './pages/Magia.jsx'
 import RadarPagina from './pages/Radar.jsx'
 import Login from './pages/Login.jsx'
-import { AvisoAssinatura, TelaBloqueada } from './pages/Assinatura.jsx'
+import { AnuncioTela, AnuncioTeste, AvisoAssinatura, TelaBloqueada } from './pages/Assinatura.jsx'
 import { loadConfig, sair, useAuth } from './auth.js'
 import { migrar } from './fotos.jsx'
 import Mural from './pages/Mural.jsx'
@@ -168,9 +168,11 @@ export default function App() {
           </a>
         </div>
         <AvisoAssinatura />
+        {page === 'home' && <AnuncioTeste />}
         <Page key={page} />
       </main>
       {magia && <Magia paginas={PAGES} textoInicial={magia.texto} onClose={() => setMagia(null)} />}
+      <AnuncioTela />
       <Toaster />
       <nav className="bottom-nav">
         {BOTTOM.map((k) => (
@@ -285,7 +287,7 @@ function Welcome() {
             <input value={famName} onChange={(e) => setFamName(e.target.value)} placeholder="Família Silva" autoFocus />
           </Field>
           <Field label="Seu nome">
-            <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Pedro" />
+            <input value={name} onChange={(e) => setName(e.target.value)} required autoComplete="off" placeholder="Como a família te chama" />
           </Field>
           <button className="btn primary">Começar</button>
           <button type="button" className="btn ghost" onClick={() => setMode(null)}>Voltar</button>
@@ -364,7 +366,7 @@ function PickMe() {
       {family && (
         <form className="card form" onSubmit={add}>
           <Field label="Não está na lista? Digite seu nome">
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
+            <input value={name} onChange={(e) => setName(e.target.value)} required autoComplete="off" />
           </Field>
           <button className="btn primary">Entrar como novo membro</button>
         </form>

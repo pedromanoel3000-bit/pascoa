@@ -131,7 +131,7 @@ export default function Login({ motivo, intro, onVoltar, onFeito, embutido = fal
         <h2>{titulo}</h2>
         {modo === 'criar' && (
           <Field label="Seu nome">
-            <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" placeholder="Pedro" />
+            <input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="off" placeholder="Como a família te chama" />
           </Field>
         )}
         {modo !== 'redefinir' && modo !== 'verificar' && (

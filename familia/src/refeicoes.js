@@ -6,10 +6,36 @@ export const CATEGORIAS = ['Prato principal', 'Acompanhamento', 'Massa', 'Sopa',
 
 const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
+// Entidades HTML mais comuns em receitas em português (sites de receitas costumam mandar "&eacute;", "&ordm;"…).
+const ENTIDADES = {
+  nbsp: ' ', amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', ordm: 'º', ordf: 'ª', deg: '°', frac12: '½', frac14: '¼', frac34: '¾',
+  aacute: 'á', agrave: 'à', acirc: 'â', atilde: 'ã', auml: 'ä', eacute: 'é', egrave: 'è', ecirc: 'ê', iacute: 'í', icirc: 'î',
+  oacute: 'ó', ocirc: 'ô', otilde: 'õ', uacute: 'ú', ucirc: 'û', uuml: 'ü', ccedil: 'ç', ntilde: 'ñ',
+  Aacute: 'Á', Agrave: 'À', Acirc: 'Â', Atilde: 'Ã', Eacute: 'É', Ecirc: 'Ê', Iacute: 'Í', Oacute: 'Ó', Ocirc: 'Ô', Otilde: 'Õ', Uacute: 'Ú', Ccedil: 'Ç',
+  ndash: '–', mdash: '—', hellip: '…', rsquo: "'", lsquo: "'", rdquo: '"', ldquo: '"', bull: '•', times: '×', middot: '·',
+}
+
+/** Limpa o texto de um passo/ingrediente: entidades HTML, marcas de negrito/itálico (**x**, __x__) e caracteres invisíveis. */
+export const limparTexto = (s) =>
+  String(s ?? '')
+    .replace(/&#x([0-9a-f]+);/gi, (m, n) => (+('0x' + n) < 0x110000 ? String.fromCodePoint(parseInt(n, 16)) : m))
+    .replace(/&#(\d+);/g, (m, n) => (+n < 0x110000 ? String.fromCodePoint(+n) : m))
+    .replace(/&([a-z0-9]+);/gi, (m, n) => ENTIDADES[n] ?? m)
+    .replace(/[​-‍⁠﻿­]/g, '') // espaço de largura zero, hífen invisível
+    .replace(/[  ]/g, ' ')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')
+    .replace(/(^|[\s(])[*_]([^\s*_][^*_\n]*?)[*_](?=[\s).,;:!?]|$)/g, '$1$2')
+    .replace(/^\s{0,3}#{1,6}\s+/, '')
+    .replace(/[ \t]{2,}/g, ' ')
+
+// Passos colados numa linha só ("1. Misture 2. Asse") viram um por linha.
+const separarNumerados = (l) => (/^\s*1[.)]\s+.+\s2[.)]\s+/.test(l) ? l.split(/\s+(?=\d{1,2}[.)]\s+\S)/) : [l])
+
 export const linhas = (s) =>
   String(s || '')
     .split(/\n/)
-    .map((x) => x.replace(/^\s*(?:[-•*–]|\d+[.)])\s+/, '').trim())
+    .flatMap(separarNumerados)
+    .map((x) => limparTexto(x).replace(/^\s*(?:[-•*–]|\d+[.)])\s+/, '').trim())
     .filter(Boolean)
 
 // Ingredientes aceitam um por linha; se vier tudo numa linha só, separa por vírgula.
@@ -159,18 +185,12 @@ export function sugerirSemana({ dias, receitas, refeicoes, slots = ['Almoço', '
 
 // ---------- importação ----------
 const semTags = (s) =>
-  String(s ?? '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
-    .replace(/[ \t]+/g, ' ')
-    .trim()
+  limparTexto(
+    String(s ?? '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|li|div)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+  ).trim()
 
 // Duração ISO 8601 ("PT1H30M") → minutos.
 const minutosIso = (d) => {
