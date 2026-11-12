@@ -61,7 +61,7 @@ export const loadConfig = () =>
     .then((r) => (r.ok ? r.json() : Promise.reject()))
     .catch(() => {
       cfg = null
-      return { google: null, email: false, requireAccount: false }
+      return { google: null, email: false, requireAccount: true }
     }))
 
 function iniciar(j) {

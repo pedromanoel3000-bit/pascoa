@@ -247,7 +247,7 @@ const authSvc = createAuth({
   getJwks: GOOGLE_ID ? jwksFetcher(env('GOOGLE_JWKS_URL') || 'https://www.googleapis.com/oauth2/v3/certs') : null,
   mailer,
   appUrl: APP_URL,
-  requireAccount: ['1', 'true', 'sim'].includes(env('REQUIRE_ACCOUNT').toLowerCase()),
+  requireAccount: !['0', 'false', 'nao', 'não', 'off'].includes(env('REQUIRE_ACCOUNT').toLowerCase()), // contas obrigatórias, a menos que REQUIRE_ACCOUNT=0
 })
 setInterval(() => authSvc.sweep(), 3600_000).unref()
 // Atrás de um proxy (Render), o endereço de quem acessa vem no fim do X-Forwarded-For (PROXY_HOPS = quantos proxies há).
@@ -833,7 +833,7 @@ http
       console.warn(`ATENÇÃO: falta ${MISSING.join(' e ')} no ambiente. Os dados e as chaves das notificações se perdem quando o servidor reinicia.`)
     if (USE_DB && keyProblem()) console.warn('ATENÇÃO: ' + keyProblem())
     notifier.start()
-    if (authSvc.config().requireAccount) console.log('Contas obrigatórias: só se cria família com e-mail e senha ou Google.')
+    console.log(authSvc.config().requireAccount ? 'Contas obrigatórias: toda família exige e-mail e senha ou Google.' : 'ATENÇÃO: REQUIRE_ACCOUNT=0, famílias podem abrir só com o código.')
     if (GOOGLE_ID) console.log('Login com Google ligado.')
     if (billing.enabled) console.log('Cobrança ligada (Asaas ' + (String(ASAAS_KEY).includes('_hmlg_') ? 'sandbox' : 'produção') + ').')
     if (billing.enabled && !WEBHOOK_TOKEN) console.warn('ATENÇÃO: falta ASAAS_WEBHOOK_TOKEN. Sem ele os avisos de pagamento do Asaas são recusados; pagamentos só entram quando o dono toca em "Já paguei".')

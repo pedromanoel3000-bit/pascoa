@@ -326,7 +326,18 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
           await api.claim(a, key, me, { force: true })
           return { ok: true, account: a.id, role: 'owner', member: me || null }
         }
-        if (requireAccount && famRev === 0) return a ? { ok: true, readOnly: true } : { status: 401, error: 'auth_required', reason: 'account_required' }
+        if (requireAccount) {
+          if (!a) return { status: 401, error: 'auth_required', reason: token ? 'session' : famRev === 0 ? 'account_required' : 'legacy' }
+          if (famRev === 0) return { ok: true, readOnly: true } // família vazia que ninguém está criando agora
+          // Família antiga, que abria só com o código: a primeira conta que entra vira a dona e a família passa a ser protegida.
+          try {
+            await api.claim(a, key, me)
+          } catch (err) {
+            if (err.code === 'already_protected') return api.authorize({ token, key, famRev, create, me }) // outra conta chegou primeiro
+            throw err
+          }
+          return { ok: true, account: a.id, role: 'owner', member: me || null }
+        }
         return { ok: true }
       }
       if (!a) return { status: 401, error: 'auth_required', reason: token ? 'session' : 'protected' }

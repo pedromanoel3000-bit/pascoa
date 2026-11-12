@@ -5,6 +5,7 @@ import { confirmarEmail, criarConta, entrar, entrarComGoogle, esqueciASenha, loa
 const MOTIVOS = {
   protected: 'Esta família é protegida. Entre com a sua conta para continuar.',
   session: 'Sua sessão terminou. Entre de novo para continuar.',
+  legacy: 'Esta família agora exige conta. Entre com e-mail e senha ou Google. A primeira conta que entrar vira a dona; as outras entram depois, usando o mesmo código.',
   account_required: 'Para criar uma família é preciso ter uma conta. Entre ou crie a sua.',
   closed: 'Os convites desta família estão fechados. Peça ao dono para abri-los em Família → Conta e segurança.',
   removed: 'O dono da família removeu o acesso desta conta. Fale com ele se foi engano.',

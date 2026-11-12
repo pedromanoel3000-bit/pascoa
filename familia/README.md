@@ -114,7 +114,7 @@ Variáveis do Render (todas opcionais):
 | `GOOGLE_CLIENT_ID` | Liga o botão "Continuar com Google". Crie em console.cloud.google.com → APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web, e em "Origens JavaScript autorizadas" coloque o endereço do app. Copie o ID do cliente (termina em `.apps.googleusercontent.com`). Não precisa da chave secreta. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Liga o envio de e-mails (confirmar o e-mail e "Esqueci a senha"), pelo serviço Resend. `EMAIL_FROM` é o remetente, de um domínio verificado lá, ex.: `Nosso Lar <oi@seudominio.com.br>`. Com isso ligado, contas novas só entram depois de confirmar o e-mail. |
 | `APP_URL` | O endereço do app, usado nos links dos e-mails. O Render já informa `RENDER_EXTERNAL_URL`, que serve se faltar. |
-| `REQUIRE_ACCOUNT` | `1` para só deixar criar família quem estiver conectado. Famílias antigas continuam funcionando até serem protegidas. |
+| `REQUIRE_ACCOUNT` | **Ligado por padrão**: ninguém usa o app sem conta e não existe família aberta pelo código. Famílias antigas (abertas) passam a pedir login e a primeira conta que entra vira a dona. `0` volta ao modo antigo (só para desenvolvimento e testes). |
 | `CONTACT_EMAIL` | O e-mail de contato mostrado na Política de Privacidade (página `/privacidade`). Fica só no servidor, não no código. |
 | `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
 
