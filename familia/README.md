@@ -122,6 +122,14 @@ Variáveis do Render (todas opcionais):
 
 Os códigos das famílias novas têm 12 caracteres (`ABCD-EFGH-JKLM`). Os antigos (8) continuam valendo.
 
+## Fotos e anexos
+
+As fotos (álbum, mural, chat) e os anexos das notas **não ficam mais dentro dos dados da família**: vão para o armazenamento do servidor, e os dados guardam só o nome do arquivo (o resumo SHA-256 do conteúdo, então a mesma foto nunca é guardada duas vezes). Cada aparelho baixa só o que vai mostrar e guarda uma cópia no IndexedDB. Fotos tiradas sem internet ficam numa fila e sobem quando a conexão volta. As fotos antigas, que estavam dentro dos dados, são convertidas sozinhas em segundo plano na primeira abertura depois da atualização.
+
+- Cada foto é reduzida a no máximo 1280 px (1600 px nos anexos de nota) e ganha uma miniatura de 400 px; arquivos de até 4 MB.
+- Com Supabase, cada arquivo vira uma linha da tabela `families` (nome `__ph_<família>_<id>`, em base64): não exige nenhum SQL novo, mas ocupa o banco (limite grátis de 500 MB, uns mil e poucos arquivos). Para muitas famílias o caminho é o Supabase Storage.
+- O “Baixar backup” e o “Baixar meus dados” levam os nomes das fotos, **não os arquivos das fotos**.
+
 ## Como os dados são guardados
 
 - No Supabase, cada registro é uma linha da tabela `items`; sem Supabase, cada família é um arquivo JSON em `data/`. Em ambos, a família é identificada por um hash do código, nunca pelo código em si.

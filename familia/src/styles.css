@@ -817,3 +817,7 @@ button.quick-btn { font: inherit; font-size: .78rem; font-weight: 700; }
 .login-lgpd { margin: 0; text-align: center; max-width: 420px; }
 .login-lgpd a { color: var(--primary); }
 .conta-linha { flex-wrap: wrap; }
+.foto-carregando { background: linear-gradient(90deg, var(--line), color-mix(in srgb, var(--line) 50%, var(--card)), var(--line)); background-size: 200% 100%; animation: foto-brilho 1.4s linear infinite; min-height: 48px; min-width: 48px; }
+@keyframes foto-brilho { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .foto-carregando { animation: none; } }
+img.foto-carregando:not([src]) { visibility: visible; }

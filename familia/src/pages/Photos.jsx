@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { resizeImage, timeAgo } from '../utils.js'
+import { timeAgo } from '../utils.js'
+import { baixarFoto, Foto, novaFoto } from '../fotos.jsx'
+import { toast } from '../toast.jsx'
 import { Avatar, Empty, Modal, PageHeader } from '../ui.jsx'
 
 export default function Photos() {
@@ -18,7 +20,15 @@ export default function Photos() {
     const name = prompt('Álbum', album === 'all' ? 'Geral' : album)
     if (name === null) return
     setBusy(true)
-    for (const f of files) save('photo', { src: await resizeImage(f), album: name.trim() || 'Geral', caption: '' })
+    for (const f of files) {
+      try {
+        const { foto, mini, previa } = await novaFoto(f)
+        URL.revokeObjectURL(previa)
+        save('photo', { foto, mini, album: name.trim() || 'Geral', caption: '' })
+      } catch (err) {
+        toast(err.message)
+      }
+    }
     setBusy(false)
     e.target.value = ''
   }
@@ -42,7 +52,7 @@ export default function Photos() {
       <div className="photo-grid">
         {shown.map((p) => (
           <button key={p.id} onClick={() => setOpen(p)}>
-            <img src={p.src} alt={p.caption || ''} loading="lazy" />
+            <Foto id={p.mini || p.foto} legado={p.src} alt={p.caption || ''} />
           </button>
         ))}
       </div>
@@ -56,15 +66,21 @@ function Viewer({ photo, onClose }) {
   const [caption, setCaption] = useState(photo.caption || '')
   return (
     <Modal title={photo.album || 'Foto'} onClose={onClose}>
-      <img src={photo.src} alt="" className="viewer-img" />
+      <Foto id={photo.foto} antes={photo.mini} legado={photo.src} alt="" className="viewer-img" />
       <div className="row">
         <Avatar member={byId(st, photo.createdBy)} size={24} />
         <span className="muted small grow">
           {byId(st, photo.createdBy)?.name} · {timeAgo(photo.createdAt)}
         </span>
-        <a className="btn ghost small" href={photo.src} download={`foto-${photo.id}.jpg`}>
-          Baixar
-        </a>
+        {photo.foto ? (
+          <button className="btn ghost small" onClick={() => baixarFoto(photo.foto).catch((e) => toast(e.message))}>
+            Baixar
+          </button>
+        ) : (
+          <a className="btn ghost small" href={photo.src} download={`foto-${photo.id}.jpg`}>
+            Baixar
+          </a>
+        )}
         <button
           className="btn danger small"
           onClick={() => {

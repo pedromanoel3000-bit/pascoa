@@ -3,6 +3,7 @@ import { byId, list, remove, save, useStore } from '../store.js'
 import { timeAgo } from '../utils.js'
 import { Empty, Fab, Field, Modal, PageHeader, useNewIntent } from '../ui.jsx'
 import { toast } from '../toast.jsx'
+import { baixarFoto, Foto, novoArquivo } from '../fotos.jsx'
 
 // Notas e documentos importantes: senha do Wi-Fi, plano de saúde, documentos escaneados…
 export default function Notes() {
@@ -21,7 +22,15 @@ export default function Notes() {
               {n.pinned && '📌 '}
               {n.title}
             </b>
-            {n.file && (n.file.startsWith('data:image') ? <img src={n.file} alt="" /> : <span>📎 {n.fileName}</span>)}
+            {n.arquivo ? (
+              n.arquivoTipo === 'image' ? (
+                <Foto id={n.mini || n.arquivo} />
+              ) : (
+                <span>📎 {n.arquivoNome}</span>
+              )
+            ) : (
+              n.file && (n.file.startsWith('data:image') ? <img src={n.file} alt="" /> : <span>📎 {n.fileName}</span>)
+            )}
             <p>{n.body}</p>
             <small className="muted">
               {byId(st, n.createdBy)?.name} · {timeAgo(n.updatedAt)}
@@ -37,14 +46,20 @@ export default function Notes() {
 
 function NoteForm({ initial, onClose }) {
   const [n, setN] = useState({ title: '', body: '', pinned: false, ...initial })
-  const attach = (e) => {
+  const [enviando, setEnviando] = useState(false)
+  const attach = async (e) => {
     const f = e.target.files[0]
+    e.target.value = ''
     if (!f) return
-    if (f.size > 4 * 1024 * 1024) return toast('Arquivo grande demais (máx. 4 MB)')
-    const r = new FileReader()
-    r.onload = () => setN({ ...n, file: r.result, fileName: f.name })
-    r.readAsDataURL(f)
+    setEnviando(true)
+    try {
+      setN({ ...n, ...(await novoArquivo(f)), file: null, fileName: null })
+    } catch (err) {
+      toast(err.message)
+    }
+    setEnviando(false)
   }
+  const temAnexo = !!(n.arquivo || n.file)
   return (
     <Modal title={n.id ? 'Editar nota' : 'Nova nota'} onClose={onClose}>
       <form
@@ -63,13 +78,19 @@ function NoteForm({ initial, onClose }) {
         </Field>
         <div className="row">
           <label className="btn ghost">
-            📎 {n.file ? 'Trocar anexo' : 'Anexar arquivo'}
-            <input type="file" hidden onChange={attach} />
+            📎 {enviando ? 'Preparando…' : temAnexo ? 'Trocar anexo' : 'Anexar arquivo'}
+            <input type="file" hidden onChange={attach} disabled={enviando} />
           </label>
-          {n.file && (
-            <a className="btn ghost" href={n.file} download={n.fileName}>
-              Abrir {n.fileName}
-            </a>
+          {n.arquivo ? (
+            <button type="button" className="btn ghost" onClick={() => baixarFoto(n.arquivo, n.arquivoNome || 'anexo').catch((e) => toast(e.message))}>
+              Abrir {n.arquivoNome}
+            </button>
+          ) : (
+            n.file && (
+              <a className="btn ghost" href={n.file} download={n.fileName}>
+                Abrir {n.fileName}
+              </a>
+            )
           )}
         </div>
         <label className="check">

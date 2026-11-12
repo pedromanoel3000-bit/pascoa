@@ -3,7 +3,7 @@ import { byId, familyCode, joinFamily, list, resetAll, save, setMe, useStore, us
 import { AVATARS, COLORS } from './utils.js'
 import { Avatar, Field } from './ui.jsx'
 import { Icon } from './icons.jsx'
-import { Toaster } from './toast.jsx'
+import { toast, Toaster } from './toast.jsx'
 import { refreshPush } from './push.js'
 import Home from './pages/Home.jsx'
 import Calendar from './pages/Calendar.jsx'
@@ -22,6 +22,7 @@ import Magia from './pages/Magia.jsx'
 import RadarPagina from './pages/Radar.jsx'
 import Login from './pages/Login.jsx'
 import { loadConfig, sair, useAuth } from './auth.js'
+import { migrar } from './fotos.jsx'
 import Mural from './pages/Mural.jsx'
 import Notifications, { NotifBell, unreadNotifs, usePendingReads } from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
@@ -110,6 +111,12 @@ export default function App() {
       window.removeEventListener('keydown', tecla)
     }
   }, [])
+  // Fotos antigas, que ficavam dentro dos dados, passam para o armazenamento de fotos (aos poucos, em segundo plano).
+  useEffect(() => {
+    if (!st.family || !st.me || auth.need) return
+    const t = setTimeout(() => migrar().then((n) => n && toast(`📷 ${n} ${n === 1 ? 'foto otimizada' : 'fotos otimizadas'}`)), 4000)
+    return () => clearTimeout(t)
+  }, [st.family, st.me, st.rev, auth.need])
   // Mantém o cadastro de notificações deste aparelho ligado à pessoa certa.
   useEffect(() => {
     if (st.family && st.me) refreshPush()

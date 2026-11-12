@@ -11,6 +11,7 @@ import dns from 'node:dns/promises'
 import { receitaDeHtml } from './src/refeicoes.js'
 import { createNotifier } from './notify.js'
 import { privacidadeHtml } from './legal.js'
+import { createFotos, hashDe, idValido, MAX_ARQUIVO, tipoDe } from './fotos-server.js'
 import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -278,7 +279,34 @@ function json(res, status, body) {
   res.end(JSON.stringify(body))
 }
 
-// Lê o corpo, valida o código da família e carrega os dados dela.
+// Confere o código da família e se este pedido pode usá-la (famílias protegidas só abrem para contas autorizadas).
+async function checkFamily(req, res, rawCode, { create = false, me = null, needExisting = false } = {}) {
+  const code = String(rawCode || '').trim().toUpperCase()
+  if (!/^[A-Z0-9-]{6,40}$/.test(code)) {
+    json(res, 400, { error: 'invalid family code' })
+    return null
+  }
+  const key = keyFor(code)
+  try {
+    const fam = await loadFamily(key)
+    const gate = await authSvc.authorize({ token: bearer(req), key, famRev: fam.rev, create, me })
+    if (!gate.ok) {
+      json(res, gate.status, { error: gate.error, reason: gate.reason, canJoin: gate.canJoin, removed: gate.removed })
+      return null
+    }
+    if (needExisting && fam.rev === 0) {
+      json(res, 404, { error: 'family not found' })
+      return null
+    }
+    return { key, fam, gate }
+  } catch (err) {
+    console.error('Falha ao carregar a família:', err.message)
+    json(res, 503, { error: 'storage unavailable' })
+    return null
+  }
+}
+
+// Lê o corpo JSON, valida o código da família e carrega os dados dela.
 async function openFamily(req, res) {
   let body
   try {
@@ -287,26 +315,75 @@ async function openFamily(req, res) {
     json(res, 400, { error: 'invalid body' })
     return null
   }
-  const code = String(body.family || '').trim().toUpperCase()
-  if (!/^[A-Z0-9-]{6,40}$/.test(code)) {
-    json(res, 400, { error: 'invalid family code' })
-    return null
-  }
-  const key = keyFor(code)
+  const ctx = await checkFamily(req, res, body.family, { create: body.create === true, me: typeof body.me === 'string' ? body.me : null })
+  return ctx && { body, ...ctx }
+}
+
+// ---------- fotos e anexos ----------
+const fotos = createFotos({ sb, useDb: USE_DB, dataDir: DATA })
+
+function readRaw(req, max) {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    let size = 0
+    req.on('data', (c) => {
+      size += c.length
+      if (size > max) {
+        reject(new Error('too large'))
+        req.destroy()
+      } else chunks.push(c)
+    })
+    req.on('end', () => resolve(Buffer.concat(chunks)))
+    req.on('error', reject)
+  })
+}
+
+// PUT /api/foto/<id> (envia), GET (baixa), DELETE (apaga). A família vai no cabeçalho X-Family.
+async function handleFoto(req, res, id) {
+  if (!idValido(id)) return json(res, 400, { error: 'invalid id' })
+  const ctx = await checkFamily(req, res, req.headers['x-family'], { needExisting: true })
+  if (!ctx) return
+  const { key, gate } = ctx
   try {
-    const fam = await loadFamily(key)
-    // Famílias protegidas só abrem com uma conta que pertença a elas.
-    const gate = await authSvc.authorize({ token: bearer(req), key, famRev: fam.rev, create: body.create === true, me: typeof body.me === 'string' ? body.me : null })
-    if (!gate.ok) {
-      json(res, gate.status, { error: gate.error, reason: gate.reason, canJoin: gate.canJoin, removed: gate.removed })
-      return null
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const buf = await fotos.get(key, id)
+      if (!buf) return json(res, 404, { error: 'not found' })
+      const tipo = tipoDe(buf)
+      res.writeHead(200, {
+        'Content-Type': tipo,
+        'Content-Length': buf.length,
+        'Cache-Control': 'private, max-age=31536000, immutable',
+        'X-Content-Type-Options': 'nosniff',
+        ...(tipo.startsWith('image/') ? {} : { 'Content-Disposition': 'attachment' }), // só imagens abrem na tela
+      })
+      return res.end(req.method === 'HEAD' ? undefined : buf)
     }
-    return { body, key, fam, gate }
+    if (gate.readOnly) return json(res, 403, { error: 'read only' })
+    if (req.method === 'PUT') {
+      const buf = await readRaw(req, MAX_ARQUIVO)
+      if (!buf.length) return json(res, 400, { error: 'empty' })
+      if (hashDe(buf) !== id) return json(res, 400, { error: 'hash mismatch' }) // o nome é o resumo do conteúdo
+      await fotos.put(key, id, buf)
+      return json(res, 200, { ok: true })
+    }
+    if (req.method === 'DELETE') {
+      await fotos.del(key, id)
+      return json(res, 200, { ok: true })
+    }
+    json(res, 405, { error: 'method not allowed' })
   } catch (err) {
-    console.error('Falha ao carregar a família:', err.message)
-    json(res, 503, { error: 'storage unavailable' })
-    return null
+    if (err.message === 'too large') return json(res, 413, { error: 'too large' })
+    console.error('Falha em /api/foto:', err.message)
+    json(res, 500, { error: 'server error' })
   }
+}
+
+// Fotos que ficaram sem uso (o item que as citava foi apagado) saem do armazenamento.
+const idsDeFotos = (it) => [it.foto, it.mini, it.arquivo].filter(idValido)
+async function limparFotosSemUso(key, fam, candidatos) {
+  const emUso = new Set()
+  for (const it of Object.values(fam.items)) if (!it.deleted) idsDeFotos(it).forEach((id) => emUso.add(id))
+  for (const id of new Set(candidatos)) if (!emUso.has(id)) await fotos.del(key, id).catch(() => {})
 }
 
 // ---------- importar receita por link ----------
@@ -391,6 +468,9 @@ async function handleSync(req, res) {
   json(res, 200, { rev: fam.rev, epoch: fam.epoch, items, acct: gate.account ? { role: gate.role, member: gate.member } : undefined })
   // Avisa a família depois de responder, para não atrasar a sincronização.
   if (events.length && body.me) notifier.onChanges(key, fam, body.me, body.device, events)
+  // Foto que deixou de ser citada por qualquer item (apagada, trocada) sai do armazenamento.
+  const soltas = events.flatMap(([antes, depois]) => (antes ? idsDeFotos(antes).filter((id) => !idsDeFotos(depois).includes(id)) : []))
+  if (soltas.length) limparFotosSemUso(key, fam, soltas).catch(() => {})
 }
 
 // ---------- /api/auth/* ----------
@@ -419,15 +499,18 @@ const AUTH_MSG = {
 }
 
 // Apaga (marca como removido) o que é de uma pessoa dentro da família: o perfil e o que ela cadastrou.
-function eraseMemberData(key, fam, memberId) {
+async function eraseMemberData(key, fam, memberId) {
   let n = 0
+  const fotosDele = []
   for (const it of Object.values(fam.items)) {
     if (it.deleted) continue
     if (it.id === memberId || it.createdBy === memberId || it.memberId === memberId || it.to === memberId || it.owner === memberId || it.member === memberId) {
+      fotosDele.push(...idsDeFotos(it))
       putItem(key, fam, { id: it.id, type: it.type, deleted: true, createdAt: it.createdAt })
       n++
     }
   }
+  await limparFotosSemUso(key, fam, fotosDele)
   return n
 }
 
@@ -439,6 +522,7 @@ async function deleteFamilyData(key) {
   families.delete(key)
   if (USE_DB) await sb(`families?family=eq.${key}`, { method: 'DELETE' }) // os itens saem junto
   else fs.rmSync(fileFor(key), { force: true })
+  await fotos.delAll(key).catch((err) => console.error('Falha ao apagar as fotos:', err.message))
   await authSvc.dropFamilyAuth(key)
 }
 
@@ -493,7 +577,7 @@ async function handleAuth(req, res, action) {
           feito.familiasApagadas++
           continue
         }
-        if (body.deleteMine === true && f.member) eraseMemberData(f.key, await loadFamily(f.key), f.member)
+        if (body.deleteMine === true && f.member) await eraseMemberData(f.key, await loadFamily(f.key), f.member)
         await authSvc.leaveFamily(acct, f.key)
         feito.familiasDeixadas++
       }
@@ -599,6 +683,7 @@ http
   .createServer((req, res) => {
     const url = req.url.split('?')[0]
     if (url === '/api/sync' && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
+    if (url.startsWith('/api/foto/')) return handleFoto(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/auth/')) return handleAuth(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))

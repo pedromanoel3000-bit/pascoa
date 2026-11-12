@@ -1,9 +1,10 @@
 import { Fragment, useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, resizeImage, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
+import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
 import { Avatar, useMembers } from '../ui.jsx'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
+import { Foto, novaFoto } from '../fotos.jsx'
 import { PushBanner } from './PushSettings.jsx'
 import { abrirMagia } from './Magia.jsx'
 import CasaViva from './Casa.jsx'
@@ -221,14 +222,14 @@ function MuralCompacto({ posts }) {
                 <b>{autor?.name || 'Alguém'}</b>
                 <small className="muted">{timeAgo(p.createdAt)}</small>
               </div>
-              <p className="mural-c-texto">{p.text || (p.photo ? '📷 Foto' : '')}</p>
+              <p className="mural-c-texto">{p.text || (p.foto || p.photo ? '📷 Foto' : '')}</p>
               <div className="mural-c-info muted small">
                 {p.poll && <span className={falta ? 'late' : ''}>📊 {falta ? 'Falta o seu voto' : `${doPost.length} ${doPost.length === 1 ? 'voto' : 'votos'}`}</span>}
                 {(p.likes || []).length > 0 && <span>❤️ {p.likes.length}</span>}
                 {(p.comments || []).length > 0 && <span>💬 {p.comments.length}</span>}
               </div>
             </div>
-            {p.photo && <img className="mural-c-foto" src={p.photo} alt="" />}
+            {(p.foto || p.photo) && <Foto className="mural-c-foto" id={p.mini || p.foto} legado={p.photo} />}
           </button>
         )
       })}
@@ -306,7 +307,12 @@ export function Composer() {
     const f = e.target.files[0]
     if (!f) return
     setBusy(true)
-    setPhoto(await resizeImage(f))
+    try {
+      if (photo?.previa) URL.revokeObjectURL(photo.previa)
+      setPhoto(await novaFoto(f))
+    } catch (err) {
+      toast(err.message)
+    }
     setBusy(false)
   }
   const post = (e) => {
@@ -321,8 +327,8 @@ export function Composer() {
       return
     }
     if (!text.trim() && !photo) return
-    const p = save('post', { text: text.trim(), photo, likes: [], comments: [] })
-    if (photo) save('photo', { src: photo, caption: text.trim(), album: 'Mural', postId: p.id })
+    const p = save('post', { text: text.trim(), ...(photo ? { foto: photo.foto, mini: photo.mini } : {}), likes: [], comments: [] })
+    if (photo) save('photo', { foto: photo.foto, mini: photo.mini, caption: text.trim(), album: 'Mural', postId: p.id }) // mesma foto: não é guardada duas vezes
     setText('')
     setPhoto(null)
   }
@@ -356,7 +362,7 @@ export function Composer() {
       )}
       {photo && (
         <div className="preview">
-          <img src={photo} alt="" />
+          <img src={photo.previa} alt="" />
           <button type="button" className="icon-btn" onClick={() => setPhoto(null)}>
             ✕
           </button>
@@ -426,7 +432,7 @@ export function Post({ post }) {
         )}
       </header>
       {post.text && <p className="post-text">{post.text}</p>}
-      {post.photo && <img className="post-photo" src={post.photo} alt="" />}
+      {(post.foto || post.photo) && <Foto className="post-photo" id={post.foto} antes={post.mini} legado={post.photo} />}
       {post.poll && <Poll post={post} />}
       <div className="row post-actions">
         <button className={'btn ghost' + (liked ? ' liked' : '')} onClick={toggleLike}>

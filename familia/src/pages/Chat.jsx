@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { byId, list, markRead, remove, save, useStore } from '../store.js'
-import { fmtDate, fmtTime, resizeImage, ymd } from '../utils.js'
+import { fmtDate, fmtTime, ymd } from '../utils.js'
+import { Foto, novaFoto } from '../fotos.jsx'
 import { Avatar, PageHeader, useMembers } from '../ui.jsx'
+import { toast } from '../toast.jsx'
 
 // Conversa "family" é o grupo; conversas privadas usam os dois ids em ordem.
 export const convKey = (a, b) => [a, b].sort().join('|')
@@ -60,7 +62,13 @@ function Conversation({ conv }) {
   const sendPhoto = async (e) => {
     const f = e.target.files[0]
     if (!f) return
-    save('message', { conv, photo: await resizeImage(f, 1024) })
+    try {
+      const { foto, mini, previa } = await novaFoto(f, { max: 1024 })
+      URL.revokeObjectURL(previa)
+      save('message', { conv, foto, mini })
+    } catch (err) {
+      toast(err.message)
+    }
     e.target.value = ''
   }
 
@@ -82,7 +90,7 @@ function Conversation({ conv }) {
                 {!mine && <Avatar member={author} size={28} />}
                 <div className="bubble" style={!mine ? { '--c': author?.color } : undefined}>
                   {!mine && conv === 'family' && <b className="msg-author">{author?.name}</b>}
-                  {m.photo && <img src={m.photo} alt="" />}
+                  {(m.foto || m.photo) && <Foto id={m.foto} antes={m.mini} legado={m.photo} />}
                   {m.text && <span>{m.text}</span>}
                   <small>
                     {fmtTime(m.createdAt)}
