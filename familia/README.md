@@ -118,6 +118,8 @@ Variáveis do Render (todas opcionais):
 | `CONTACT_EMAIL` | O e-mail de contato mostrado na Política de Privacidade (página `/privacidade`). Fica só no servidor, não no código. |
 | `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
 
+**Dados e exclusão:** em Família → Conta e segurança há “Baixar meus dados” e “Excluir minha conta”. Membros escolhem se o que cadastraram sai junto; o dono precisa antes passar a propriedade (“Tornar dono”) ou, se for a única conta, apagar a família inteira. A mesma conta de e-mail pode ser criada de novo depois, do zero.
+
 Os códigos das famílias novas têm 12 caracteres (`ABCD-EFGH-JKLM`). Os antigos (8) continuam valendo.
 
 ## Como os dados são guardados

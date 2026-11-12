@@ -158,6 +158,13 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
   const publicAccount = (a) => ({ email: a.email, name: a.name || '', hasPassword: !!a.pass, google: !!a.google, verified: !!a.verified })
   const emailOn = !!(mailer && appUrl)
 
+  // Lista (no registro da conta) as famílias de que ela participa, para exportar e excluir os dados depois.
+  const indexFam = (id, key) =>
+    lock(acctName(id), async () => {
+      const cur = await get(acctName(id))
+      if (cur && !cur.fams?.includes(key)) await put(acctName(id), { ...cur, fams: [...(cur.fams || []), key] })
+    })
+
   async function newSession(a, device = '') {
     const token = crypto.randomBytes(32).toString('base64url')
     await put('sess-' + sha(token).slice(0, 40), { a: a.id, v: a.sv || 0, exp: Date.now() + SESSION_MS, at: Date.now(), device: String(device).slice(0, 60) })
@@ -324,6 +331,7 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
       }
       if (!a) return { status: 401, error: 'auth_required', reason: token ? 'session' : 'protected' }
       const e = fa.accounts[a.id]
+      if (e && !a.fams?.includes(key)) indexFam(a.id, key).catch(() => {}) // contas antigas passam a ser indexadas no primeiro acesso
       if (!e) return fa.banned?.[a.id] ? { status: 403, error: 'not_member', canJoin: false, removed: true } : { status: 403, error: 'not_member', canJoin: !!fa.joinOpen }
       return { ok: true, account: a.id, role: e.role, member: e.member || null }
     },
@@ -336,6 +344,7 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
           if (cur.accounts[a.id]) return cur
           fail('already_protected', 409)
         }
+        await indexFam(a.id, key)
         return put('fam-' + key, { owner: a.id, joinOpen: true, at: Date.now(), accounts: { [a.id]: { role: 'owner', member: member || null, email: a.email, name: a.name || '', at: Date.now() } } })
       }),
 
@@ -348,6 +357,7 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
         if (cur.accounts[a.id]) return cur
         if (cur.banned?.[a.id]) fail('removed', 403) // quem o dono removeu não volta sozinho pelo código
         if (!cur.joinOpen) fail('invites_closed', 403)
+        await indexFam(a.id, key)
         return put('fam-' + key, { ...cur, accounts: { ...cur.accounts, [a.id]: { role: 'member', member: null, email: a.email, name: a.name || '', at: Date.now() } } })
       })
     },
@@ -379,12 +389,47 @@ export function createAuth({ read, write, clientId = '', getJwks = null, mailer 
           const { [account]: gone, ...rest } = cur.accounts
           return put('fam-' + key, { ...cur, accounts: rest, banned: { ...(cur.banned || {}), [account]: { email: gone.email, at: Date.now() } } })
         }
+        if (action === 'transfer') {
+          const alvo = cur.accounts[account]
+          if (!alvo || account === a.id) fail('invalid', 400)
+          return put('fam-' + key, { ...cur, owner: account, accounts: { ...cur.accounts, [a.id]: { ...cur.accounts[a.id], role: 'member' }, [account]: { ...alvo, role: 'owner' } } })
+        }
         if (action === 'allow') {
           const { [account]: _x, ...rest } = cur.banned || {}
           return put('fam-' + key, { ...cur, banned: rest })
         }
         fail('invalid', 400)
       }),
+
+    // ---------- exportar e excluir ----------
+    /** Famílias protegidas de que a conta participa (já conferindo que ainda existem e que ela ainda é membro). */
+    async myFamilies(a, extraKeys = []) {
+      const out = []
+      for (const key of new Set([...(a.fams || []), ...extraKeys])) {
+        const fa = await get('fam-' + key)
+        const me = fa?.accounts?.[a.id]
+        if (me) out.push({ key, role: me.role, member: me.member || null, others: Object.keys(fa.accounts).length - 1 })
+      }
+      return out
+    },
+
+    // Confere quem está pedindo a exclusão: o e-mail digitado e, para quem tem senha, a senha.
+    async confirmDelete(a, { password, confirm }) {
+      if (!limiter.hit(`del:${a.id}`, 6, 3600_000)) fail('rate_limited', 429)
+      if (normEmail(confirm) !== a.email) fail('confirm_mismatch', 400)
+      if (a.pass && !(await checkPassword(String(password || ''), a.pass))) fail('invalid_credentials', 401)
+    },
+
+    // Tira a conta da família (e libera o membro) sem apagar o que ela cadastrou.
+    leaveFamily: (a, key) =>
+      lock('fam-' + key, async () => {
+        const cur = await get('fam-' + key)
+        if (!cur?.accounts[a.id]) return
+        const { [a.id]: _x, ...rest } = cur.accounts
+        await put('fam-' + key, { ...cur, accounts: rest })
+      }),
+    dropFamilyAuth: (key) => lock('fam-' + key, () => put('fam-' + key, null)),
+    eraseAccount: (a) => lock(acctName(a.id), () => put(acctName(a.id), null)), // as sessões deixam de valer junto
 
     sweep: () => limiter.sweep(),
   }

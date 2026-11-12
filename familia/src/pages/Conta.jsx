@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { byId, useStore } from '../store.js'
+import { byId, resetAll, useStore } from '../store.js'
 import { Field, Modal } from '../ui.jsx'
 import { toast } from '../toast.jsx'
-import { gerenciar, infoFamilia, proteger, sair, trocarSenha, useAuth } from '../auth.js'
+import { baixarMeusDados, excluirConta, gerenciar, infoFamilia, proteger, sair, trocarSenha, useAuth } from '../auth.js'
 import Login from './Login.jsx'
 
 // Família → Conta e segurança: quem está conectado e quem pode entrar na família.
@@ -13,6 +13,7 @@ export default function Conta() {
   const [erro, setErro] = useState('')
   const [entrando, setEntrando] = useState(false)
   const [senha, setSenha] = useState(null) // { atual, nova } quando o formulário está aberto
+  const [excluindo, setExcluindo] = useState(null) // formulário de exclusão da conta
   const [ocupado, setOcupado] = useState(false)
 
   const carregar = () => {
@@ -84,6 +85,11 @@ export default function Conta() {
                         </div>
                       </div>
                       {a.role !== 'owner' && (
+                        <button className="btn ghost small" disabled={ocupado} onClick={() => confirm(`Passar a propriedade da família para ${a.email}? Você vira membro.`) && agir(() => gerenciar(st.family, { action: 'transfer', account: a.id }), 'Propriedade passada')}>
+                          Tornar dono
+                        </button>
+                      )}
+                      {a.role !== 'owner' && (
                         <button
                           className="btn danger small"
                           disabled={ocupado}
@@ -121,6 +127,26 @@ export default function Conta() {
               Sair da conta
             </button>
           </div>
+          <h4 className="conta-sub">Seus dados</h4>
+          <p className="muted small">Você pode baixar o que o app guarda sobre você ou apagar a sua conta quando quiser.</p>
+          <div className="row conta-acoes">
+            <button
+              className="btn ghost"
+              disabled={ocupado}
+              onClick={async () => {
+                try {
+                  await baixarMeusDados(st.family)
+                } catch (e) {
+                  toast(e.message)
+                }
+              }}
+            >
+              Baixar meus dados
+            </button>
+            <button className="btn danger" onClick={() => setExcluindo({ confirm: '', password: '', deleteMine: false, deleteFamily: false, erro: '' })}>
+              Excluir minha conta
+            </button>
+          </div>
         </>
       )}
       {entrando && (
@@ -128,6 +154,7 @@ export default function Conta() {
           <Login embutido onFeito={() => setEntrando(false)} />
         </Modal>
       )}
+      {excluindo && <ExcluirConta f={excluindo} setF={setExcluindo} info={info} auth={auth} family={st.family} ocupado={ocupado} setOcupado={setOcupado} />}
       {senha && (
         <Modal title="Trocar senha" onClose={() => setSenha(null)}>
           <form
@@ -159,5 +186,68 @@ export default function Conta() {
         </Modal>
       )}
     </div>
+  )
+}
+
+function ExcluirConta({ f, setF, info, auth, family, ocupado, setOcupado }) {
+  const protegida = !!info?.protected
+  const dono = protegida && info.role === 'owner'
+  const outras = dono ? info.accounts.length - 1 : 0
+  const bloqueado = dono && outras > 0
+  const precisaApagarFamilia = dono && outras === 0
+  const podeEnviar = !bloqueado && f.confirm.trim() && (!auth.hasPassword || f.password) && (!precisaApagarFamilia || f.deleteFamily)
+  const set = (k, v) => setF({ ...f, [k]: v, erro: '' })
+  return (
+    <Modal title="Excluir minha conta" onClose={() => setF(null)}>
+      <form
+        className="form"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          setOcupado(true)
+          try {
+            await excluirConta({ family, confirm: f.confirm, password: f.password, deleteMine: f.deleteMine, deleteFamily: f.deleteFamily })
+            resetAll() // some também a cópia dos dados que estava neste aparelho
+            toast('Conta excluída.')
+          } catch (err) {
+            setF({ ...f, erro: err.message })
+          } finally {
+            setOcupado(false)
+          }
+        }}
+      >
+        <p className="small">
+          Isso apaga a sua conta (e-mail, senha e acesso pelo Google) e <b>não dá para desfazer</b>. Este aparelho também deixa de ter os dados da família: baixe antes o que quiser guardar (“Baixar meus dados” ou, para a família inteira, “Baixar backup”).
+        </p>
+        {protegida && !dono && (
+          <>
+            <label className="check">
+              <input type="checkbox" checked={f.deleteMine} onChange={(e) => set('deleteMine', e.target.checked)} /> Apagar também o meu perfil e tudo o que eu cadastrei nesta família
+            </label>
+            <p className="muted small">{f.deleteMine ? 'Suas tarefas, mensagens, fotos, treinos e desejos saem da família.' : 'Sem marcar, o que você cadastrou continua na família; só o seu acesso é removido.'}</p>
+          </>
+        )}
+        {bloqueado && <p className="late small">Você é o dono desta família e há outras contas nela. Antes, toque em “Tornar dono” em outra pessoa (ou remova as outras contas).</p>}
+        {precisaApagarFamilia && (
+          <>
+            <p className="small">Você é a única conta e a dona desta família. Sem você, ninguém mais poderia abri-la.</p>
+            <label className="check">
+              <input type="checkbox" checked={f.deleteFamily} onChange={(e) => set('deleteFamily', e.target.checked)} /> Apagar a família inteira, com os dados de todos os membros
+            </label>
+          </>
+        )}
+        <Field label={`Para confirmar, digite o seu e-mail (${auth.email})`}>
+          <input value={f.confirm} onChange={(e) => set('confirm', e.target.value)} autoCapitalize="none" autoComplete="off" inputMode="email" required />
+        </Field>
+        {auth.hasPassword && (
+          <Field label="Sua senha">
+            <input type="password" value={f.password} onChange={(e) => set('password', e.target.value)} autoComplete="current-password" required />
+          </Field>
+        )}
+        {f.erro && <p className="late" role="alert">{f.erro}</p>}
+        <button className="btn danger" disabled={ocupado || !podeEnviar}>
+          {ocupado ? 'Excluindo…' : 'Excluir para sempre'}
+        </button>
+      </form>
+    </Modal>
   )
 }

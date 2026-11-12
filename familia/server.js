@@ -117,6 +117,7 @@ async function dbFlush(key) {
     }
     await send()
   } catch (err) {
+    if (!families.has(key)) return // a família foi apagada enquanto gravava
     console.error('Falha ao gravar no Supabase, tentando de novo em 5 s:', err.message)
     const again = dirty.get(key) || new Map()
     for (const r of rows) if (!again.has(r.id)) again.set(r.id, r.data)
@@ -410,8 +411,47 @@ const AUTH_MSG = {
   removed: 'O dono da família removeu o acesso desta conta.',
   invites_closed: 'Os convites dessa família estão fechados. Peça ao dono para abri-los.',
   not_member: 'Essa conta não faz parte da família.',
+  confirm_mismatch: 'Digite o seu e-mail exatamente como está na conta para confirmar.',
+  owner_has_members: 'Você é o dono de uma família com outras contas. Torne outra pessoa dona (ou remova as contas) antes de excluir a sua.',
+  owner_alone: 'Você é a única conta e dona da família. Marque "apagar a família inteira" para continuar, ou convide alguém e passe a propriedade antes.',
   not_owner: 'Só o dono da família pode fazer isso.',
   member_taken: 'Essa pessoa já está ligada a outra conta.',
+}
+
+// Apaga (marca como removido) o que é de uma pessoa dentro da família: o perfil e o que ela cadastrou.
+function eraseMemberData(key, fam, memberId) {
+  let n = 0
+  for (const it of Object.values(fam.items)) {
+    if (it.deleted) continue
+    if (it.id === memberId || it.createdBy === memberId || it.memberId === memberId || it.to === memberId || it.owner === memberId || it.member === memberId) {
+      putItem(key, fam, { id: it.id, type: it.type, deleted: true, createdAt: it.createdAt })
+      n++
+    }
+  }
+  return n
+}
+
+// Apaga a família inteira do servidor (memória, banco ou arquivo).
+async function deleteFamilyData(key) {
+  clearTimeout(saveTimers.get(key))
+  saveTimers.delete(key)
+  dirty.delete(key)
+  families.delete(key)
+  if (USE_DB) await sb(`families?family=eq.${key}`, { method: 'DELETE' }) // os itens saem junto
+  else fs.rmSync(fileFor(key), { force: true })
+  await authSvc.dropFamilyAuth(key)
+}
+
+// Dados ligados à pessoa, para ela baixar (portabilidade). Não inclui a lista de outros membros nem as mensagens dos outros.
+async function exportAccount(acct, extraKey) {
+  const out = { geradoEm: new Date().toISOString(), conta: { email: acct.email, nome: acct.name || '', criadaEm: acct.at ? new Date(acct.at).toISOString() : null, entraComSenha: !!acct.pass, entraComGoogle: !!acct.google }, familias: [] }
+  for (const f of await authSvc.myFamilies(acct, extraKey ? [extraKey] : [])) {
+    const fam = await loadFamily(f.key)
+    const m = f.member
+    const meus = m ? Object.values(fam.items).filter((it) => !it.deleted && it.type !== 'pushsub' && (it.id === m || it.createdBy === m || it.memberId === m || it.to === m || it.owner === m)) : []
+    out.familias.push({ nome: fam.items.family?.name || '', papel: f.role === 'owner' ? 'dono' : 'membro', membro: m ? fam.items[m]?.name || '' : '', itens: meus })
+  }
+  return out
 }
 
 async function handleAuth(req, res, action) {
@@ -433,6 +473,33 @@ async function handleAuth(req, res, action) {
     if (!acct) return json(res, 401, { error: 'invalid_session' })
     if (action === 'me') return json(res, 200, { account: authSvc.publicAccount(acct) })
     if (action === 'logout') return json(res, 200, await authSvc.logout(token))
+    const codeOf = (c) => (/^[A-Z0-9-]{6,40}$/.test(String(c || '').trim().toUpperCase()) ? keyFor(String(c).trim().toUpperCase()) : null)
+    if (action === 'export') {
+      res.setHeader('Content-Disposition', 'attachment; filename="nosso-lar-meus-dados.json"')
+      return json(res, 200, await exportAccount(acct, codeOf(body.family)))
+    }
+    if (action === 'delete') {
+      await authSvc.confirmDelete(acct, body)
+      const fams = await authSvc.myFamilies(acct, codeOf(body.family) ? [codeOf(body.family)] : [])
+      // Primeiro confere tudo, depois apaga: assim nada fica pela metade.
+      for (const f of fams) {
+        if (f.role === 'owner' && f.others > 0) throw new AuthError('owner_has_members', 409)
+        if (f.role === 'owner' && body.deleteFamily !== true) throw new AuthError('owner_alone', 409)
+      }
+      const feito = { familiasApagadas: 0, familiasDeixadas: 0 }
+      for (const f of fams) {
+        if (f.role === 'owner') {
+          await deleteFamilyData(f.key)
+          feito.familiasApagadas++
+          continue
+        }
+        if (body.deleteMine === true && f.member) eraseMemberData(f.key, await loadFamily(f.key), f.member)
+        await authSvc.leaveFamily(acct, f.key)
+        feito.familiasDeixadas++
+      }
+      await authSvc.eraseAccount(acct)
+      return json(res, 200, { ok: true, ...feito })
+    }
     if (action === 'password') return json(res, 200, await authSvc.changePassword(acct, body))
     // Ações de família: o código identifica a família.
     const code = String(body.family || '').trim().toUpperCase()

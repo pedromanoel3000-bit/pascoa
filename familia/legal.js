@@ -60,10 +60,10 @@ p, li { margin: 6px 0; } ul { padding-left: 20px; } a { color: var(--brand); } .
 <p>Não compartilhamos seus dados com terceiros para outros fins, salvo obrigação legal.</p>
 
 <h2>5. Por quanto tempo guardamos</h2>
-<p>Enquanto sua conta e sua família existirem. Se você pedir a exclusão, apagamos os dados, exceto o que formos obrigados a manter por lei.</p>
+<p>Enquanto sua conta e sua família existirem. Você mesmo pode excluir a sua conta no aplicativo (Família → Conta e segurança → Excluir minha conta): a conta é apagada na hora e você escolhe se o que cadastrou na família também sai. Quem é a única dona de uma família pode apagá-la inteira. Pedidos feitos por e-mail também são atendidos, exceto o que formos obrigados a manter por lei.</p>
 
 <h2>6. Seus direitos</h2>
-<p>Você pode, a qualquer momento: confirmar que tratamos seus dados, acessá-los, corrigi-los, pedir a exclusão, pedir a portabilidade, saber com quem compartilhamos e revogar consentimentos. Dentro do app, Família → Baixar backup gera um arquivo com os dados da sua família. Para exercer qualquer direito, escreva para ${mail}.</p>
+<p>Você pode, a qualquer momento: confirmar que tratamos seus dados, acessá-los, corrigi-los, pedir a exclusão, pedir a portabilidade, saber com quem compartilhamos e revogar consentimentos. Dentro do app, Família → Conta e segurança → Baixar meus dados gera um arquivo com os dados ligados a você, e Família → Baixar backup gera um arquivo com os dados da família inteira. Para exercer qualquer direito, escreva para ${mail}.</p>
 
 <h2>7. Segurança</h2>
 <p>Usamos conexão criptografada (HTTPS), senhas protegidas por algoritmo próprio para isso, limite de tentativas de acesso e separação dos dados de cada família. Nenhum sistema é totalmente imune a falhas; em caso de incidente relevante, avisaremos os afetados.</p>

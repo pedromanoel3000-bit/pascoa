@@ -83,6 +83,22 @@ export async function sair() {
   aviso()
 }
 
+// Baixa um arquivo com os dados ligados à conta (portabilidade).
+export async function baixarMeusDados(family) {
+  const dados = await api('export', { family })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 1)], { type: 'application/json' }))
+  a.download = `nosso-lar-meus-dados-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000)
+}
+// Exclui a conta no servidor e esquece a sessão neste aparelho.
+export async function excluirConta(body) {
+  const j = await api('delete', body)
+  guardar({})
+  aviso()
+  return j
+}
 export const infoFamilia = (family) => api('info', { family })
 export const proteger = (family, member) => api('claim', { family, member })
 export const gerenciar = (family, body) => api('manage', { family, ...body })
