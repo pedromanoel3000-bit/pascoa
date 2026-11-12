@@ -646,3 +646,34 @@ input.tr-in { text-align: center; font-weight: 700; padding: 10px 4px; min-width
 .magia-achado { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-top: 1px solid var(--line); text-align: left; width: 100%; }
 .magia-achado .grow { display: flex; flex-direction: column; min-width: 0; }
 .magia-achado b, .magia-achado small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- casa viva ---------- */
+.casa { border-radius: 22px; overflow: hidden; background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px rgb(20 20 60 / 10%); }
+.casa-cena { position: relative; line-height: 0; }
+.casa-cena svg { display: block; width: 100%; height: auto; max-height: 300px; }
+.casa-cena svg a { cursor: pointer; }
+.casa-cena::before { content: ''; position: absolute; inset: 0 0 auto; height: 38%; background: linear-gradient(rgb(0 0 40 / 22%), transparent); pointer-events: none; }
+.casa-texto { position: absolute; left: 16px; top: 12px; right: 16px; line-height: 1.25; color: #fff; text-shadow: 0 1px 6px rgb(0 0 30 / 45%); pointer-events: none; }
+.casa-texto h1 { font-size: 1.35rem; font-weight: 800; }
+.casa-texto p { margin: 1px 0 0; opacity: .95; font-size: .9rem; }
+.casa-avisos { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 10px 12px; }
+.casa-avisos::-webkit-scrollbar { display: none; }
+.casa-aviso { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: var(--bg); font-size: .84rem; font-weight: 600; white-space: nowrap; }
+.casa-aviso.ok { background: color-mix(in srgb, #46a758 16%, var(--card)); color: color-mix(in srgb, #2b7a3d 80%, var(--text, currentColor)); }
+.hero-semana { padding: 10px 12px; border-radius: 18px; }
+.hero-semana .week-strip { margin-top: 0; }
+.casa-nuvem { animation: casa-vento 46s linear infinite alternate; }
+.casa-nuvem.lenta { animation-duration: 70s; animation-direction: alternate-reverse; }
+.casa-estrela, .casa-brilha { animation: casa-pisca 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.casa-fumaca { animation: casa-fumaca 4.5s ease-out infinite; opacity: 0; }
+.casa-fumaca.f2 { animation-delay: 1.5s; }
+.casa-fumaca.f3 { animation-delay: 3s; }
+.casa-roupa { animation: casa-balanco 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: top center; }
+.casa-balao { animation: casa-balanco 4s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom center; }
+.casa-chuva path { animation: casa-chuva 1s linear infinite; }
+@keyframes casa-vento { from { transform: translateX(-14px); } to { transform: translateX(18px); } }
+@keyframes casa-pisca { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes casa-fumaca { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 20% { opacity: .8; } 100% { opacity: 0; transform: translate(14px, -34px) scale(1.5); } }
+@keyframes casa-balanco { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+@keyframes casa-chuva { from { transform: translate(0, 0); } to { transform: translate(-46px, 140px); } }
+@media (prefers-reduced-motion: reduce) { .casa svg * { animation: none !important; } .casa-fumaca { opacity: .6; } }

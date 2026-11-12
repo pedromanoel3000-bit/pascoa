@@ -7,6 +7,7 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 
 | Tela | O que faz |
 |---|---|
+| **Casa viva** | No Início, um desenho da casa muda conforme a vida real: uma janela por pessoa (acesa quando ela não tem tarefa pendente), roupa no varal e sacos de lixo quando essas tarefas estão pendentes, caixas no quintal para tarefas atrasadas, geladeira que esvazia conforme a lista de compras cresce, bolo e balões em aniversário, fumaça na chaminé quando há refeição planejada, bandeira do correio com mensagem nova, céu de acordo com a hora. Se alguém compartilha a localização, mostra chuva, nuvens e temperatura (Open-Meteo, posição arredondada) |
 | **Barra mágica** | Escreva ou fale do seu jeito (“dentista amanhã às 15h”, “comprar leite e pão”, “gastei 35,90 no mercado”) e o app cria o evento, a tarefa, a compra, o gasto ou o recado. Também busca em tudo. Abre pelo ✨, pela barra do Início ou com Ctrl/⌘ + K. Roda no aparelho, sem serviço externo |
 | **Mural** | Resumo do dia, contagens regressivas (eventos marcados e aniversários dos próximos 30 dias), recados, fotos e votações rápidas |
 | **Agenda** | Calendário compartilhado com cor por pessoa, repetição (inclusive personalizada: a cada N dias/semanas/meses/anos, dias da semana, “3ª quarta do mês”, até uma data ou N vezes), filtro por membro e aniversários automáticos |

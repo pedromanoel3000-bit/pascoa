@@ -6,6 +6,7 @@ import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { PushBanner } from './PushSettings.jsx'
 import { abrirMagia } from './Magia.jsx'
+import CasaViva from './Casa.jsx'
 import { toggleTask } from './Tasks.jsx'
 import { SLOTS } from './Meals.jsx'
 import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
@@ -39,22 +40,9 @@ export default function Home() {
 
   return (
     <div className="page">
-      <section className="hero">
-        <div className="hero-top">
-          <div className="grow">
-            <h1>
-              {hello}, {me.name}!
-            </h1>
-            <p>
-              {WEEKDAYS_LONG[new Date().getDay()]}, {fmtDate(day, { day: 'numeric', month: 'long' })}
-            </p>
-          </div>
-          <a href="#settings" className="avatars hero-avatars" aria-label="Membros da família">
-            {members.slice(0, 5).map((m) => (
-              <Avatar key={m.id} member={m} size={34} />
-            ))}
-          </a>
-        </div>
+      <CasaViva saudacao={`${hello}, ${me.name}!`} data={`${WEEKDAYS_LONG[new Date().getDay()]}, ${fmtDate(day, { day: 'numeric', month: 'long' })}`} />
+
+      <section className="hero hero-semana">
         <div className="week-strip">
           {week.map((d) => {
             const evs = eventsOn(allEvents, people, d)
