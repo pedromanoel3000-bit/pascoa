@@ -160,5 +160,10 @@ As fotos (álbum, mural, chat) e os anexos das notas **não ficam mais dentro do
 
 ## Página de divulgação (landing page)
 
-Em `/comecar` (arquivo `landing.js`; imagens em `public/lp/`). É o endereço para colocar nos anúncios e na bio do Instagram: `https://SEU-SITE/comecar`. Os botões levam a `/#cadastro`, que abre direto o formulário de **Criar conta**, e mantêm os parâmetros do anúncio (`?utm_source=...&utm_campaign=...&utm_content=...`) no endereço. Os preços e os dias de teste vêm do próprio servidor (mesmos valores do app), e `CONTACT_EMAIL`, `COMPANY_NAME` e `COMPANY_CNPJ` aparecem no rodapé quando definidos.
+Em `/comecar` (arquivo `landing.js`; imagens em `public/lp/`). É o endereço para colocar nos anúncios e na bio do Instagram: `https://SEU-SITE/comecar`.
 
+- Os botões levam a `/#cadastro`, que abre direto o formulário de **Criar conta**, e mantêm os parâmetros do anúncio (`?utm_source=...&utm_campaign=...&utm_content=...`) no endereço.
+- Preços, dias de teste e dias de leitura vêm do próprio servidor (os mesmos valores do app). `CONTACT_EMAIL`, `COMPANY_NAME` e `COMPANY_CNPJ` aparecem na página quando definidos.
+- `APP_URL` (no Render, `RENDER_EXTERNAL_URL` já serve) é usado no endereço canônico e na imagem de compartilhamento (`public/lp/og.jpg`), que precisam ser endereços completos para o Instagram e o WhatsApp mostrarem a prévia.
+- As telas mostradas são capturas reais do app com uma família de exemplo. Tudo o que a página afirma existe no app: ao mudar um recurso ou uma regra de cobrança, confira o texto de `landing.js`.
+- A página funciona sem JavaScript (só perde as animações) e traz dados estruturados (aplicativo e perguntas frequentes) para os buscadores.

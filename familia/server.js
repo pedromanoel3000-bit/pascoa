@@ -827,7 +827,7 @@ http
     if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))
     if ((url === '/comecar' || url === '/comecar/') && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
-      return res.end(landingHtml({ contato: env('CONTACT_EMAIL'), empresa: env('COMPANY_NAME'), cnpj: env('COMPANY_CNPJ'), precos: { mensal: PLANOS.mensal.valor, anual: PLANOS.anual.valor }, testeDias: TESTE_DIAS_USADO, leituraDias: LEITURA_MS / 86400000 }))
+      return res.end(landingHtml({ base: APP_URL, contato: env('CONTACT_EMAIL'), empresa: env('COMPANY_NAME'), cnpj: env('COMPANY_CNPJ'), precos: { mensal: PLANOS.mensal.valor, anual: PLANOS.anual.valor }, testeDias: TESTE_DIAS_USADO, leituraDias: LEITURA_MS / 86400000 }))
     }
     if (url === '/termos' && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
