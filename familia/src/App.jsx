@@ -20,6 +20,8 @@ import Wishes from './pages/Wishes.jsx'
 import Treino from './pages/Treino.jsx'
 import Magia from './pages/Magia.jsx'
 import RadarPagina from './pages/Radar.jsx'
+import Login from './pages/Login.jsx'
+import { loadConfig, sair, useAuth } from './auth.js'
 import Mural from './pages/Mural.jsx'
 import Notifications, { NotifBell, unreadNotifs, usePendingReads } from './pages/Notifications.jsx'
 import Settings from './pages/Settings.jsx'
@@ -69,6 +71,18 @@ export default function App() {
   const me = byId(st, st.me)
   usePendingReads()
   const brand = byId(st, 'family')?.color
+  const auth = useAuth()
+  // Links dos e-mails: #reset/<código> (nova senha) e #verify/<código> (confirmar e-mail).
+  const lerLink = () => {
+    const m = /^#(reset|verify)\/([\w-]{20,100})$/.exec(location.hash)
+    return m ? { modo: m[1] === 'reset' ? 'redefinir' : 'verificar', token: m[2] } : null
+  }
+  const [link, setLink] = useState(lerLink)
+  useEffect(() => {
+    const h = () => setLink((atual) => lerLink() || atual)
+    window.addEventListener('hashchange', h) // o link do e-mail pode abrir com o app já aberto
+    return () => window.removeEventListener('hashchange', h)
+  }, [])
 
   // Cor escolhida pela família (Família → Cor do app).
   useEffect(() => {
@@ -101,7 +115,13 @@ export default function App() {
     if (st.family && st.me) refreshPush()
   }, [st.family, st.me])
 
+  const fecharLink = () => {
+    history.replaceState(null, '', '#home')
+    setLink(null)
+  }
+  if (link) return <Login modoInicial={link.modo} token={link.token} onVoltar={fecharLink} onFeito={fecharLink} />
   if (!st.family) return <Welcome />
+  if (auth.need) return <Login motivo={auth.need.reason} onVoltar={() => resetAll()} />
   if (!me) return <PickMe />
 
   const unread = unreadCount(st)
@@ -200,6 +220,11 @@ function SyncBadge() {
 }
 
 function Welcome() {
+  const auth = useAuth()
+  const [cfg, setCfg] = useState(null)
+  useEffect(() => {
+    loadConfig().then(setCfg)
+  }, [])
   const [mode, setMode] = useState(null)
   const [famName, setFamName] = useState('')
   const [name, setName] = useState('')
@@ -207,7 +232,7 @@ function Welcome() {
 
   const create = (e) => {
     e.preventDefault()
-    joinFamily(familyCode())
+    joinFamily(familyCode(), { create: !!auth.token }) // conectado: a família já nasce protegida pela conta
     save('family', { id: 'family', name: famName.trim() || 'Minha família' })
     const m = save('member', { name: name.trim(), color: COLORS[0], emoji: AVATARS[0], role: 'admin' })
     setMe(m.id)
@@ -218,6 +243,9 @@ function Welcome() {
     joinFamily(code.trim().toUpperCase())
   }
 
+  if (mode === 'conta') return <Login intro="Entre ou crie a sua conta." onVoltar={() => setMode(null)} onFeito={() => setMode(null)} />
+  if (cfg?.requireAccount && !auth.token) return <Login intro="Para começar, entre ou crie a sua conta." />
+
   return (
     <div className="welcome">
       <img src="/icon.svg" alt="" className="welcome-logo" />
@@ -227,6 +255,18 @@ function Welcome() {
         <div className="welcome-actions">
           <button className="btn primary big" onClick={() => setMode('create')}>Criar a minha família</button>
           <button className="btn big" onClick={() => setMode('join')}>Entrar com um código</button>
+          {auth.token ? (
+            <p className="muted small">
+              Conectado como {auth.email}.{' '}
+              <button type="button" className="link" onClick={() => sair()}>
+                Sair
+              </button>
+            </p>
+          ) : (
+            <button type="button" className="link" onClick={() => setMode('conta')}>
+              Tenho uma conta
+            </button>
+          )}
         </div>
       )}
       {mode === 'create' && (

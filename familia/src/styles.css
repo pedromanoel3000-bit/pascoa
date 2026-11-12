@@ -797,3 +797,20 @@ button.quick-btn { font: inherit; font-size: .78rem; font-weight: 700; }
 .mural-c-info:empty { display: none; }
 .mural-c-foto { flex: none; width: 56px; height: 56px; border-radius: 10px; object-fit: cover; }
 .mural-c-mais { align-self: center; color: var(--primary); font-weight: 700; font-size: .88rem; padding: 4px 8px; }
+
+/* ---------- conta e login ---------- */
+.login-motivo { margin: 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--primary) 12%, var(--card)); font-weight: 600; max-width: 420px; }
+.login-aviso { margin: 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--pos) 14%, var(--card)); max-width: 420px; }
+.welcome .card.form h2 { font-size: 1.15rem; }
+.login-ou { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .85rem; }
+.login-ou::before, .login-ou::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.login-google { display: flex; justify-content: center; min-height: 44px; }
+.login-links { display: flex; justify-content: space-between; gap: 10px; }
+.login-embutido { display: flex; flex-direction: column; gap: 10px; }
+.login-embutido .card { box-shadow: none; border: 0; padding: 0; }
+.conta-sub { margin: 10px 0 0; font-size: .9rem; color: var(--muted); }
+.conta-linha { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.conta-linha b { overflow-wrap: anywhere; }
+.conta-acoes { margin-top: 6px; }
+.switch-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; cursor: pointer; }
+.login-links .link, .welcome-actions .link { font-size: .92rem; margin: 0; color: var(--primary); }

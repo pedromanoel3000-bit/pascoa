@@ -5,6 +5,7 @@ import { Avatar, Field, Modal, PageHeader, useMembers } from '../ui.jsx'
 import { toast } from '../toast.jsx'
 import { aplicarTema, TEMAS, temaAtual } from '../tema.js'
 import PushSettings, { ServerWarning } from './PushSettings.jsx'
+import Conta from './Conta.jsx'
 
 export default function Settings() {
   const st = useStore()
@@ -95,6 +96,8 @@ export default function Settings() {
           Enviar convite
         </button>
       </div>
+
+      <Conta />
 
       <PushSettings />
 

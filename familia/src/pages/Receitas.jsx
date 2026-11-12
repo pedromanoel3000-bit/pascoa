@@ -4,6 +4,7 @@ import { list, remove, save, update, useStore } from '../store.js'
 import { addDays, today } from '../utils.js'
 import { Field, Modal } from '../ui.jsx'
 import { toast, vibrate } from '../toast.jsx'
+import { authHeader } from '../auth.js'
 import { CATEGORIAS, duracao, escalar, juntarIngredientes, lerIngrediente, linhas, receitaDeTexto, REFEICOES, relogio, splitIng, tempoDoPasso, usoDasReceitas } from '../refeicoes.js'
 
 const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -382,7 +383,7 @@ export function ImportarReceita({ onClose, onPronta }) {
     e.preventDefault()
     setEstado('buscando')
     try {
-      const resp = await fetch('/api/receita', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ family: st.family, url: url.trim() }) })
+      const resp = await fetch('/api/receita', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify({ family: st.family, url: url.trim() }) })
       const j = await resp.json()
       if (j.ok) return onPronta({ ...j.receita, porcoes: j.receita.porcoes || '', tempo: j.receita.tempo || '', link: /^https?:\/\//.test(url.trim()) ? url.trim() : 'https://' + url.trim() })
       setEstado(j.motivo === 'sem-receita' ? 'Abri a página, mas não encontrei a receita nela de um jeito que eu consiga ler. Copie o texto da receita e use a aba “Colar texto”.' : j.motivo === 'endereco' ? 'Esse endereço não parece válido. Confira o link.' : 'O site não respondeu ou não deixou ler a página. Copie o texto da receita e use a aba “Colar texto”.')

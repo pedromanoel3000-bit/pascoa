@@ -1,5 +1,6 @@
 // Notificações neste aparelho: ativar, desativar, testar e manter o cadastro em dia.
 import { getState } from './store.js'
+import { authHeader } from './auth.js'
 
 export const PUSH_CATEGORIES = [
   ['chat', 'Mensagens do chat'],
@@ -66,7 +67,7 @@ async function api(path, body) {
   const st = getState()
   const res = await fetch('/api/push/' + path, {
     method: body ? 'POST' : 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: body ? JSON.stringify({ family: st.family, ...body }) : undefined,
   })
   const data = await res.json().catch(() => ({}))

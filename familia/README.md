@@ -99,6 +99,26 @@ Para mantê-lo acordado de graça:
 
 Avisos de mensagens, tarefas e listas funcionam mesmo sem isso, porque acontecem enquanto alguém está usando o app.
 
+## Contas (e-mail e senha, Google) e famílias protegidas
+
+Sem nada configurado, o app funciona como sempre: quem tem o código da família entra. Com contas, a família pode ser **protegida**: só entra quem tem uma conta (e-mail e senha, ou Google) **e** o código, e o dono vê e remove quem tem acesso (Família → Conta e segurança).
+
+- **E-mail e senha** funcionam sem configurar nada. As senhas são guardadas com scrypt (nunca em texto) e o servidor limita as tentativas de entrada.
+- **Proteger uma família que já existe:** Família → Conta e segurança → Entrar ou criar conta → Proteger esta família. Depois disso, cada aparelho precisa entrar com uma conta (o código continua servindo de convite).
+- **Famílias novas criadas já conectado** nascem protegidas.
+
+Variáveis do Render (todas opcionais):
+
+| Variável | Para quê |
+|---|---|
+| `GOOGLE_CLIENT_ID` | Liga o botão "Continuar com Google". Crie em console.cloud.google.com → APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web, e em "Origens JavaScript autorizadas" coloque o endereço do app. Copie o ID do cliente (termina em `.apps.googleusercontent.com`). Não precisa da chave secreta. |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Liga o envio de e-mails (confirmar o e-mail e "Esqueci a senha"), pelo serviço Resend. `EMAIL_FROM` é o remetente, de um domínio verificado lá, ex.: `Nosso Lar <oi@seudominio.com.br>`. Com isso ligado, contas novas só entram depois de confirmar o e-mail. |
+| `APP_URL` | O endereço do app, usado nos links dos e-mails. O Render já informa `RENDER_EXTERNAL_URL`, que serve se faltar. |
+| `REQUIRE_ACCOUNT` | `1` para só deixar criar família quem estiver conectado. Famílias antigas continuam funcionando até serem protegidas. |
+| `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
+
+Os códigos das famílias novas têm 12 caracteres (`ABCD-EFGH-JKLM`). Os antigos (8) continuam valendo.
+
 ## Como os dados são guardados
 
 - No Supabase, cada registro é uma linha da tabela `items`; sem Supabase, cada família é um arquivo JSON em `data/`. Em ambos, a família é identificada por um hash do código, nunca pelo código em si.

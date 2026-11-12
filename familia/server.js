@@ -10,6 +10,7 @@ import net from 'node:net'
 import dns from 'node:dns/promises'
 import { receitaDeHtml } from './src/refeicoes.js'
 import { createNotifier } from './notify.js'
+import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(ROOT, 'dist')
@@ -201,6 +202,21 @@ async function setConfig(name, value) {
   return value
 }
 
+// Grava (criando ou substituindo) uma configuração. Usado pelas contas e sessões.
+async function putConfig(name, value) {
+  if (USE_DB) {
+    await sb('families?on_conflict=family', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ family: `__cfg_${name}`, epoch: JSON.stringify(value) }]),
+    })
+    return
+  }
+  const file = path.join(DATA, `__cfg_${name}.json`)
+  fs.writeFileSync(file + '.tmp', JSON.stringify(value))
+  fs.renameSync(file + '.tmp', file)
+}
+
 // Famílias que têm algum aparelho cadastrado para notificações (para os lembretes funcionarem após reiniciar).
 async function familiesWithPush() {
   if (USE_DB) {
@@ -214,16 +230,38 @@ async function familiesWithPush() {
     .filter((key) => Object.values(fileLoad(key).items).some((i) => i.type === 'pushsub' && !i.deleted))
 }
 
+// ---------- contas ----------
+const APP_URL = env('APP_URL', 'RENDER_EXTERNAL_URL').replace(/\/+$/, '')
+const mailer = createMailer({ apiKey: env('RESEND_API_KEY'), from: env('EMAIL_FROM'), apiUrl: env('EMAIL_API_URL') || undefined })
+const GOOGLE_ID = env('GOOGLE_CLIENT_ID')
+const authSvc = createAuth({
+  read: getConfig,
+  write: putConfig,
+  clientId: GOOGLE_ID,
+  getJwks: GOOGLE_ID ? jwksFetcher(env('GOOGLE_JWKS_URL') || 'https://www.googleapis.com/oauth2/v3/certs') : null,
+  mailer,
+  appUrl: APP_URL,
+  requireAccount: ['1', 'true', 'sim'].includes(env('REQUIRE_ACCOUNT').toLowerCase()),
+})
+setInterval(() => authSvc.sweep(), 3600_000).unref()
+// Atrás de um proxy (Render), o endereço de quem acessa vem no fim do X-Forwarded-For (PROXY_HOPS = quantos proxies há).
+const clientIp = (req) => {
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',').map((x) => x.trim()).filter(Boolean)
+  const hops = Math.max(1, Number(env('PROXY_HOPS')) || 1)
+  return xff.length ? xff[Math.max(0, xff.length - hops)] : req.socket.remoteAddress || ''
+}
+const bearer = (req) => (/^Bearer\s+(\S+)$/i.exec(req.headers.authorization || '') || [])[1] || ''
+
 const notifier = createNotifier({ families, loadFamily, putItem, getConfig, setConfig, familiesWithPush })
 
 // ---------- HTTP ----------
-function readBody(req) {
+function readBody(req, max = MAX_BODY) {
   return new Promise((resolve, reject) => {
     let size = 0
     const chunks = []
     req.on('data', (c) => {
       size += c.length
-      if (size > MAX_BODY) {
+      if (size > max) {
         reject(new Error('too large'))
         req.destroy()
       } else chunks.push(c)
@@ -254,7 +292,14 @@ async function openFamily(req, res) {
   }
   const key = keyFor(code)
   try {
-    return { body, key, fam: await loadFamily(key) }
+    const fam = await loadFamily(key)
+    // Famílias protegidas só abrem com uma conta que pertença a elas.
+    const gate = await authSvc.authorize({ token: bearer(req), key, famRev: fam.rev, create: body.create === true, me: typeof body.me === 'string' ? body.me : null })
+    if (!gate.ok) {
+      json(res, gate.status, { error: gate.error, reason: gate.reason, canJoin: gate.canJoin, removed: gate.removed })
+      return null
+    }
+    return { body, key, fam, gate }
   } catch (err) {
     console.error('Falha ao carregar a família:', err.message)
     json(res, 503, { error: 'storage unavailable' })
@@ -322,9 +367,10 @@ const PRIVATE_TYPES = new Set(['pushsub'])
 async function handleSync(req, res) {
   const ctx = await openFamily(req, res)
   if (!ctx) return
-  const { body, key, fam } = ctx
+  const { body, key, fam, gate } = ctx
+  if (gate.member) body.me = gate.member // numa família protegida, cada conta age como o membro ligado a ela
   notifier.seen(key, body.device)
-  const changes = Array.isArray(body.changes) ? body.changes : []
+  const changes = Array.isArray(body.changes) && !gate.readOnly ? body.changes : []
   const changed = []
   const events = []
   for (const c of changes) {
@@ -340,9 +386,82 @@ async function handleSync(req, res) {
   if (changed.length) saveFamily(key, changed)
   const since = body.epoch === fam.epoch ? Number(body.since) || 0 : 0
   const items = Object.values(fam.items).filter((i) => i.rev > since && !PRIVATE_TYPES.has(i.type))
-  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items })
+  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items, acct: gate.account ? { role: gate.role, member: gate.member } : undefined })
   // Avisa a família depois de responder, para não atrasar a sincronização.
   if (events.length && body.me) notifier.onChanges(key, fam, body.me, body.device, events)
+}
+
+// ---------- /api/auth/* ----------
+const AUTH_MSG = {
+  invalid_email: 'Esse e-mail não parece válido.',
+  weak_password: 'A senha precisa ter pelo menos 8 caracteres.',
+  exists: 'Já existe uma conta com esse e-mail. Entre com ela.',
+  invalid_credentials: 'E-mail ou senha incorretos.',
+  unverified: 'Confirme seu e-mail primeiro: enviamos um link para a sua caixa de entrada.',
+  rate_limited: 'Muitas tentativas. Espere alguns minutos e tente de novo.',
+  invalid_token: 'Esse link já foi usado ou expirou. Peça um novo.',
+  email_off: 'A recuperação por e-mail ainda não está ligada neste servidor.',
+  google_off: 'O login com Google não está ligado neste servidor.',
+  invalid_google: 'Não consegui confirmar a sua conta do Google. Tente de novo.',
+  email_not_verified: 'O Google diz que esse e-mail ainda não foi confirmado.',
+  conflict: 'Esse e-mail já está ligado a outra conta do Google.',
+  already_protected: 'Essa família já é protegida por outra conta. Entre nela pelo código.',
+  removed: 'O dono da família removeu o acesso desta conta.',
+  invites_closed: 'Os convites dessa família estão fechados. Peça ao dono para abri-los.',
+  not_member: 'Essa conta não faz parte da família.',
+  not_owner: 'Só o dono da família pode fazer isso.',
+  member_taken: 'Essa pessoa já está ligada a outra conta.',
+}
+
+async function handleAuth(req, res, action) {
+  if (action === 'config') return req.method === 'GET' ? json(res, 200, authSvc.config()) : json(res, 404, { error: 'not found' })
+  if (req.method !== 'POST') return json(res, 404, { error: 'not found' })
+  let body
+  try {
+    body = JSON.parse((await readBody(req, 64 * 1024)) || '{}')
+  } catch {
+    return json(res, 400, { error: 'invalid body' })
+  }
+  const ctx = { ip: clientIp(req), device: String(req.headers['user-agent'] || '') }
+  const token = bearer(req)
+  try {
+    const open = { register: 'register', login: 'login', google: 'google', verify: 'verify', forgot: 'forgot', reset: 'reset' }
+    if (open[action]) return json(res, 200, await authSvc[open[action]](body, ctx))
+    // Daqui para a frente é preciso estar conectado.
+    const acct = await authSvc.session(token)
+    if (!acct) return json(res, 401, { error: 'invalid_session' })
+    if (action === 'me') return json(res, 200, { account: authSvc.publicAccount(acct) })
+    if (action === 'logout') return json(res, 200, await authSvc.logout(token))
+    if (action === 'password') return json(res, 200, await authSvc.changePassword(acct, body))
+    // Ações de família: o código identifica a família.
+    const code = String(body.family || '').trim().toUpperCase()
+    if (!/^[A-Z0-9-]{6,40}$/.test(code)) return json(res, 400, { error: 'invalid family code' })
+    const key = keyFor(code)
+    if (action === 'claim') {
+      const fam = await loadFamily(key)
+      if (fam.rev === 0) return json(res, 404, { error: 'family_not_found' })
+      await authSvc.claim(acct, key, typeof body.member === 'string' ? body.member : null)
+      return json(res, 200, await authSvc.info(acct, key))
+    }
+    if (action === 'join') {
+      await authSvc.join(acct, key, ctx)
+      return json(res, 200, await authSvc.info(acct, key))
+    }
+    if (action === 'info') return json(res, 200, await authSvc.info(acct, key))
+    if (action === 'member') {
+      await authSvc.setMember(acct, key, typeof body.member === 'string' ? body.member : null)
+      return json(res, 200, await authSvc.info(acct, key))
+    }
+    if (action === 'manage') {
+      await authSvc.manage(acct, key, body)
+      return json(res, 200, await authSvc.info(acct, key))
+    }
+    json(res, 404, { error: 'not found' })
+  } catch (err) {
+    if (err instanceof AuthError) return json(res, err.status, { error: err.code, message: AUTH_MSG[err.code], ...err.extra })
+    console.error('Falha em /api/auth/' + action + ':', err.message)
+    json(res, 500, { error: 'server error' })
+  }
 }
 
 async function handlePush(req, res, action) {
@@ -412,6 +531,7 @@ http
   .createServer((req, res) => {
     const url = req.url.split('?')[0]
     if (url === '/api/sync' && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
+    if (url.startsWith('/api/auth/')) return handleAuth(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/api/health') return handleHealth(res)
@@ -424,4 +544,7 @@ http
       console.warn(`ATENÇÃO: falta ${MISSING.join(' e ')} no ambiente. Os dados e as chaves das notificações se perdem quando o servidor reinicia.`)
     if (USE_DB && keyProblem()) console.warn('ATENÇÃO: ' + keyProblem())
     notifier.start()
+    if (authSvc.config().requireAccount) console.log('Contas obrigatórias: só se cria família com e-mail e senha ou Google.')
+    if (GOOGLE_ID) console.log('Login com Google ligado.')
+    if (mailer && !APP_URL) console.warn('ATENÇÃO: RESEND_API_KEY definido, mas falta APP_URL (o endereço do app). Verificação e recuperação por e-mail ficam desligadas.')
   })
