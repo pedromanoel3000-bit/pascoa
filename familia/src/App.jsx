@@ -260,7 +260,7 @@ function Welcome() {
   }
 
   if (mode === 'conta') return <Login intro="Entre ou crie a sua conta." onVoltar={() => setMode(null)} onFeito={() => setMode(null)} />
-  if (cfg?.requireAccount && !auth.token) return <Login intro="Para começar, entre ou crie a sua conta." />
+  if (cfg?.requireAccount && !auth.token) return <Login intro={location.hash === '#cadastro' ? 'Crie a sua conta para começar o teste grátis.' : 'Para começar, entre ou crie a sua conta.'} modoInicial={location.hash === '#cadastro' ? 'criar' : 'entrar'} />
 
   return (
     <div className="welcome">

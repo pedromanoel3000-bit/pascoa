@@ -11,6 +11,7 @@ import dns from 'node:dns/promises'
 import { receitaDeHtml } from './src/refeicoes.js'
 import { createNotifier } from './notify.js'
 import { privacidadeHtml, termosHtml } from './legal.js'
+import { landingHtml } from './landing.js'
 import { ajustarEscrita, podeVer, redigir } from './src/privacidade.js'
 import { createFotos, hashDe, idValido, MAX_ARQUIVO, tipoDe } from './fotos-server.js'
 import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
@@ -778,6 +779,9 @@ const TYPES = {
   '.json': 'application/json',
   '.webmanifest': 'application/manifest+json',
   '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
   '.ico': 'image/x-icon',
 }
 
@@ -793,7 +797,7 @@ function serveStatic(req, res) {
   const ext = path.extname(file)
   res.writeHead(200, {
     'Content-Type': TYPES[ext] || 'application/octet-stream',
-    'Cache-Control': urlPath.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+    'Cache-Control': urlPath.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : urlPath.startsWith('/lp/') ? 'public, max-age=86400' : 'no-cache',
   })
   fs.createReadStream(file).pipe(res)
 }
@@ -821,6 +825,10 @@ http
     if (url.startsWith('/api/auth/')) return handleAuth(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))
+    if ((url === '/comecar' || url === '/comecar/') && (req.method === 'GET' || req.method === 'HEAD')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
+      return res.end(landingHtml({ contato: env('CONTACT_EMAIL'), empresa: env('COMPANY_NAME'), cnpj: env('COMPANY_CNPJ'), precos: { mensal: PLANOS.mensal.valor, anual: PLANOS.anual.valor }, testeDias: TESTE_DIAS_USADO, leituraDias: LEITURA_MS / 86400000 }))
+    }
     if (url === '/termos' && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
       return res.end(termosHtml({ contato: env('CONTACT_EMAIL'), empresa: env('COMPANY_NAME'), cnpj: env('COMPANY_CNPJ'), revisado: ['1', 'true', 'sim'].includes(env('TERMOS_REVISADOS').toLowerCase()), precos: { mensal: PLANOS.mensal.valor, anual: PLANOS.anual.valor }, testeDias: TESTE_DIAS_USADO, leituraDias: LEITURA_MS / 86400000 }))

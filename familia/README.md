@@ -157,3 +157,8 @@ As fotos (álbum, mural, chat) e os anexos das notas **não ficam mais dentro do
 - Cada registro tem `id`, `type` e `updatedAt`. Em caso de conflito, vale a alteração mais recente.
 - Fotos são reduzidas antes de salvar (até 1280 px).
 - Em **Configurações → Baixar backup** você salva tudo num arquivo `.json`.
+
+## Página de divulgação (landing page)
+
+Em `/comecar` (arquivo `landing.js`; imagens em `public/lp/`). É o endereço para colocar nos anúncios e na bio do Instagram: `https://SEU-SITE/comecar`. Os botões levam a `/#cadastro`, que abre direto o formulário de **Criar conta**, e mantêm os parâmetros do anúncio (`?utm_source=...&utm_campaign=...&utm_content=...`) no endereço. Os preços e os dias de teste vêm do próprio servidor (mesmos valores do app), e `CONTACT_EMAIL`, `COMPANY_NAME` e `COMPANY_CNPJ` aparecem no rodapé quando definidos.
+
