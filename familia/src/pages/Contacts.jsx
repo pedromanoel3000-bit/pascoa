@@ -27,7 +27,11 @@ export default function Contacts() {
                 <b>{c.name}</b>
                 <span className="muted small">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
                 {c.address && <span className="muted small">📍 {c.address}</span>}
+                {c.birthday && <span className="muted small">🎂 {c.birthday.slice(8)}/{c.birthday.slice(5, 7)}</span>}
               </button>
+              <a className="icon-btn" href={`#wishes/${c.id}`} aria-label={`Presentes para ${c.name}`}>
+                🎁
+              </a>
               {c.phone && (
                 <>
                   <a className="icon-btn" href={`tel:${c.phone}`} aria-label="Ligar">

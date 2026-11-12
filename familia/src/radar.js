@@ -131,8 +131,8 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
       peso: 82 - d * 2,
       para: todos.filter((m) => m !== p.id),
       titulo: `Aniversário de ${p.name} ${d === 1 ? 'amanhã' : `em ${d} dias`}`,
-      texto: `Ainda não há presente planejado.${desejos ? ` Há ${plural(desejos, 'desejo', 'desejos')} na lista de ${p.name}.` : ''}`,
-      acoes: [...(desejos ? [{ tipo: 'ir', rotulo: 'Ver desejos', ir: '#wishes' }] : []), { tipo: 'criarTarefa', rotulo: 'Criar tarefa', titulo: `Comprar presente para ${p.name}`, due: limite }],
+      texto: `Ainda não há presente planejado.${desejos ? (p.type === 'contact' ? ` Vocês anotaram ${plural(desejos, 'ideia', 'ideias')} para ${p.name}.` : ` Há ${plural(desejos, 'desejo', 'desejos')} na lista de ${p.name}.`) : ''}`,
+      acoes: [{ tipo: 'ir', rotulo: desejos ? (p.type === 'contact' ? 'Ver ideias' : 'Ver desejos') : p.type === 'contact' ? 'Anotar presente' : 'Ver a lista', ir: '#wishes/' + p.id }, { tipo: 'criarTarefa', rotulo: 'Criar tarefa', titulo: `Comprar presente para ${p.name}`, due: limite }],
     })
   }
 
@@ -239,12 +239,12 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
 
   // 12. Presente que quem está lendo reservou e o aniversário está chegando.
   for (const w of de('wish').filter((w) => w.reservedBy === eu && !w.received && w.owner !== eu)) {
-    const dono = membros.find((m) => m.id === w.owner)
+    const dono = [...membros, ...de('contact')].find((m) => m.id === w.owner)
     if (!dono?.birthday) continue
     const dia = nextBirthday(dono.birthday, hoje)
     const d = daysUntil(dia, hoje)
     if (d < 0 || d > 5) continue
-    add({ id: `reservado:${w.id}:${dia.slice(0, 4)}`, icone: '🎀', peso: 76 - d, para: [eu], titulo: `Presente de ${dono.name}: já comprou?`, texto: `Você reservou “${w.title}” e o aniversário é ${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d} dias`}.`, acoes: [{ tipo: 'ir', rotulo: 'Ver desejos', ir: '#wishes' }] })
+    add({ id: `reservado:${w.id}:${dia.slice(0, 4)}`, icone: '🎀', peso: 76 - d, para: [eu], titulo: `Presente de ${dono.name}: já comprou?`, texto: `Você reservou “${w.title}” e o aniversário é ${d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d} dias`}.`, acoes: [{ tipo: 'ir', rotulo: 'Ver desejos', ir: '#wishes/' + w.owner }] })
   }
 
   // 13. Ritmo de compra: itens que costumam voltar para a lista e já passaram do prazo de costume.

@@ -23,6 +23,12 @@ export default function Wishes() {
 
   const person = byId(st, owner) || byId(st, st.me)
   const mineList = person.id === st.me
+  const contato = person.type === 'contact'
+  // Contatos entram como abas quando têm aniversário, já têm ideias de presente ou foram abertos agora.
+  const todosDesejos = list(st, 'wish')
+  const contatos = list(st, 'contact').sort((a, b) => a.name.localeCompare(b.name))
+  const abas = contatos.filter((c) => c.id === person.id || c.birthday || todosDesejos.some((w) => w.owner === c.id))
+  const fora = contatos.filter((c) => !abas.includes(c))
   const wishes = list(st, 'wish')
     .filter((w) => w.owner === person.id)
     .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0) || a.createdAt - b.createdAt)
@@ -39,20 +45,40 @@ export default function Wishes() {
             <Avatar member={m} size={22} /> {m.id === st.me ? 'Minha' : m.name}
           </button>
         ))}
+        {abas.map((c) => (
+          <button key={c.id} className={'chip' + (c.id === person.id ? ' on' : '')} onClick={() => setOwner(c.id)}>
+            🎁 {c.name}
+          </button>
+        ))}
+        {fora.length > 0 && (
+          <select className="chip wish-outro" value="" onChange={(e) => e.target.value && setOwner(e.target.value)} aria-label="Outro contato">
+            <option value="">+ Contato…</option>
+            {fora.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
-      {mineList ? (
+      {contato ? (
+        <p className="muted small">
+          Ideias de presente para {person.name}
+          {person.birthday ? ` (aniversário em ${person.birthday.slice(8)}/${person.birthday.slice(5, 7)})` : ''}. Toque no + para anotar e em “Vou dar este” para ninguém comprar repetido.
+        </p>
+      ) : mineList ? (
         <p className="muted small">Coloque o que você gostaria de ganhar. Ninguém te conta quem vai dar o quê 🤫</p>
       ) : (
         <p className="muted small">Marque “Vou dar este” para ninguém comprar repetido. {person.name} não vê essa marcação.</p>
       )}
 
-      {open.length === 0 && <Empty icon="🎁" text={mineList ? 'Sua lista está vazia. Toque no + para adicionar um desejo.' : `${person.name} ainda não colocou desejos.`} />}
+      {open.length === 0 && <Empty icon="🎁" text={contato ? `Nenhuma ideia de presente para ${person.name} ainda. Toque no + para anotar.` : mineList ? 'Sua lista está vazia. Toque no + para adicionar um desejo.' : `${person.name} ainda não colocou desejos.`} />}
       {open.map((w) => (
         <WishCard key={w.id} wish={w} mineList={mineList} onEdit={() => setEditing(w)} />
       ))}
 
-      {received.length > 0 && <h3 className="section-title">Já ganhou</h3>}
+      {received.length > 0 && <h3 className="section-title">{contato ? 'Já demos' : 'Já ganhou'}</h3>}
       {received.map((w) => (
         <WishCard key={w.id} wish={w} mineList={mineList} onEdit={() => setEditing(w)} />
       ))}
@@ -70,7 +96,7 @@ export default function Wishes() {
         </div>
       )}
 
-      <Fab onClick={() => setEditing({ owner: person.id })} label="Novo desejo" />
+      {(mineList || contato) && <Fab onClick={() => setEditing({ owner: person.id })} label={contato ? 'Nova ideia de presente' : 'Novo desejo'} />}
       {editing && <WishForm initial={editing} onClose={() => setEditing(null)} />}
     </div>
   )
@@ -111,7 +137,7 @@ function WishCard({ wish, mineList, onEdit }) {
           </button>
         )
       ) : wish.received ? (
-        <span className="muted small">Já ganhou 🎉</span>
+        <span className="muted small">{byId(st, wish.owner)?.type === 'contact' ? 'Presente dado 🎉' : 'Já ganhou 🎉'}</span>
       ) : reserver ? (
         <div className="row wish-reserved">
           <Avatar member={reserver} size={22} />
@@ -119,6 +145,11 @@ function WishCard({ wish, mineList, onEdit }) {
           {wish.reservedBy === st.me && (
             <button className="link" onClick={() => update(wish.id, { reservedBy: null })}>
               desistir
+            </button>
+          )}
+          {wish.reservedBy === st.me && byId(st, wish.owner)?.type === 'contact' && (
+            <button className="link" onClick={() => update(wish.id, { received: true })}>
+              já dei ✓
             </button>
           )}
         </div>
@@ -144,8 +175,9 @@ function WishForm({ initial, onClose }) {
   const [w, setW] = useState({ title: '', link: '', price: '', notes: '', starred: false, ...initial })
   const set = (k) => (e) => setW({ ...w, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
   const owner = byId(st, w.owner)
+  const contato = owner?.type === 'contact'
   return (
-    <Modal title={w.id ? 'Editar desejo' : owner?.id === st.me ? 'Novo desejo' : `Desejo de ${owner?.name}`} onClose={onClose}>
+    <Modal title={contato ? `Presente para ${owner.name}` : w.id ? 'Editar desejo' : owner?.id === st.me ? 'Novo desejo' : `Desejo de ${owner?.name}`} onClose={onClose}>
       <form
         className="form"
         onSubmit={(e) => {
@@ -155,8 +187,8 @@ function WishForm({ initial, onClose }) {
           onClose()
         }}
       >
-        <Field label="O que você quer ganhar">
-          <input value={w.title} onChange={set('title')} required autoFocus placeholder="Fone de ouvido sem fio" />
+        <Field label={contato ? 'Ideia de presente' : 'O que você quer ganhar'}>
+          <input value={w.title} onChange={set('title')} required autoFocus placeholder={contato ? 'Perfume, livro, flores…' : 'Fone de ouvido sem fio'} />
         </Field>
         <Field label="Link da loja (opcional)">
           <input type="text" inputMode="url" autoCapitalize="none" value={w.link} onChange={set('link')} placeholder="https://…" />
@@ -170,11 +202,11 @@ function WishForm({ initial, onClose }) {
           </Field>
         </div>
         <label className="check">
-          <input type="checkbox" checked={!!w.starred} onChange={set('starred')} /> ⭐ Quero muito
+          <input type="checkbox" checked={!!w.starred} onChange={set('starred')} /> {contato ? '⭐ Melhor ideia' : '⭐ Quero muito'}
         </label>
         {w.received && (
           <label className="check">
-            <input type="checkbox" checked={!w.received} onChange={(e) => setW({ ...w, received: !e.target.checked })} /> Voltar para a lista (ainda não ganhei)
+            <input type="checkbox" checked={!w.received} onChange={(e) => setW({ ...w, received: !e.target.checked })} /> {contato ? 'Voltar para a lista (ainda não demos)' : 'Voltar para a lista (ainda não ganhei)'}
           </label>
         )}
         <div className="row">
