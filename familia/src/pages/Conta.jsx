@@ -42,7 +42,7 @@ export default function Conta() {
       {!auth.token ? (
         <>
           <p className="muted small">
-            Sem conta, qualquer pessoa que descobrir o código da família consegue entrar. Com conta, só entra quem tiver e-mail e senha (ou Google) e o código.
+            Sem conta, qualquer pessoa que descobrir o código da família consegue entrar. Com conta, só entra quem tiver e-mail e senha (ou Google) e o código. Só em família protegida o treino, os avisos, as conversas privadas e as reservas de presentes de cada pessoa ficam realmente só com ela.
           </p>
           <button className="btn primary" onClick={() => setEntrando(true)}>
             Entrar ou criar conta
@@ -65,6 +65,9 @@ export default function Conta() {
           {info?.protected && (
             <>
               <p className="small">🔒 Família protegida. Você é {info.role === 'owner' ? 'o dono' : 'membro'}.</p>
+              <p className="muted small">
+                🔐 Privacidade ativa: seu treino, seus avisos, suas conversas privadas e as reservas de presente que você faz só chegam ao seu aparelho. Quem ganha o presente não vê quem o reservou.
+              </p>
               {info.role === 'owner' && (
                 <>
                   <label className="switch-row">

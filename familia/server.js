@@ -11,6 +11,7 @@ import dns from 'node:dns/promises'
 import { receitaDeHtml } from './src/refeicoes.js'
 import { createNotifier } from './notify.js'
 import { privacidadeHtml } from './legal.js'
+import { ajustarEscrita, podeVer, redigir } from './src/privacidade.js'
 import { createFotos, hashDe, idValido, MAX_ARQUIVO, tipoDe } from './fotos-server.js'
 import { AuthError, createAuth, createMailer, jwksFetcher } from './auth.js'
 
@@ -447,7 +448,17 @@ async function handleSync(req, res) {
   const ctx = await openFamily(req, res)
   if (!ctx) return
   const { body, key, fam, gate } = ctx
-  if (gate.member) body.me = gate.member // numa família protegida, cada conta age como o membro ligado a ela
+  // Numa família protegida, cada conta age como o membro ligado a ela, e a privacidade entre as pessoas vale.
+  const protegida = !!gate.account
+  let yo = gate.member
+  // Aparelho que já sabia quem é (antes da conta existir): liga a conta a esse membro, se ele ainda não for de outra conta.
+  if (protegida && !yo && typeof body.me === 'string' && fam.items[body.me]?.type === 'member' && !fam.items[body.me].deleted) {
+    try {
+      await authSvc.setMember({ id: gate.account }, key, body.me)
+      yo = body.me
+    } catch {}
+  }
+  if (yo) body.me = yo
   notifier.seen(key, body.device)
   const changes = Array.isArray(body.changes) && !gate.readOnly ? body.changes : []
   const changed = []
@@ -455,17 +466,21 @@ async function handleSync(req, res) {
   for (const c of changes) {
     if (!c || typeof c.id !== 'string' || typeof c.type !== 'string' || PRIVATE_TYPES.has(c.type)) continue
     const cur = fam.items[c.id]
-    if (!cur || (c.updatedAt || 0) >= (cur.updatedAt || 0)) {
+    const novo = protegida ? ajustarEscrita(cur, c, yo) : c
+    if (!novo) continue // essa pessoa não pode mexer nesse item (é de outra pessoa)
+    if (!cur || (novo.updatedAt || 0) >= (cur.updatedAt || 0)) {
       fam.rev += 1
-      fam.items[c.id] = { ...c, rev: fam.rev }
+      fam.items[c.id] = { ...novo, rev: fam.rev }
       changed.push(fam.items[c.id])
       events.push([cur, fam.items[c.id]])
     }
   }
   if (changed.length) saveFamily(key, changed)
   const since = body.epoch === fam.epoch ? Number(body.since) || 0 : 0
-  const items = Object.values(fam.items).filter((i) => i.rev > since && !PRIVATE_TYPES.has(i.type))
-  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items, acct: gate.account ? { role: gate.role, member: gate.member } : undefined })
+  const items = Object.values(fam.items)
+    .filter((i) => i.rev > since && !PRIVATE_TYPES.has(i.type) && (!protegida || podeVer(i, yo)))
+    .map((i) => (protegida ? redigir(i, yo) : i))
+  json(res, 200, { rev: fam.rev, epoch: fam.epoch, items, acct: protegida ? { role: gate.role, member: yo || null } : undefined })
   // Avisa a família depois de responder, para não atrasar a sincronização.
   if (events.length && body.me) notifier.onChanges(key, fam, body.me, body.device, events)
   // Foto que deixou de ser citada por qualquer item (apagada, trocada) sai do armazenamento.

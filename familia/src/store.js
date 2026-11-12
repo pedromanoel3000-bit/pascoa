@@ -2,6 +2,7 @@
 // Cada registro é { id, type, updatedAt, deleted?, ...campos }.
 import { useSyncExternalStore } from 'react'
 import { authHeader, clearNeed, onSyncDenied, vincularMembro } from './auth.js'
+import { podeVer, redigir } from './privacidade.js'
 
 const KEY = 'nosso-lar-v1'
 const POLL_MS = 4000
@@ -197,8 +198,20 @@ export async function syncNow() {
       const cur = items[it.id]
       if (!cur || (it.updatedAt || 0) >= (cur.updatedAt || 0)) items[it.id] = it
     }
+    // Família protegida: tira deste aparelho o que é de outra pessoa (cópias de antes da proteção) e esconde reservas de presente.
+    // Só apaga aqui, sem avisar o servidor, e só quando ele já sabe quem é a conta.
+    const sozinho = data.acct?.member
+    const pending0 = { ...state.pending }
+    if (sozinho) {
+      for (const [id, it] of Object.entries(items)) {
+        if (!podeVer(it, sozinho)) {
+          delete items[id]
+          delete pending0[id]
+        } else if (redigir(it, sozinho) !== it) items[id] = redigir(it, sozinho)
+      }
+    }
     // Só tira da fila o que não mudou de novo enquanto a requisição estava no ar.
-    const pending = { ...state.pending }
+    const pending = pending0
     for (const s of sent) if (pending[s.id] && pending[s.id].updatedAt === s.updatedAt) delete pending[s.id]
     const meuMembro = data.acct?.member
     setState({ items, pending, rev: data.rev, epoch: data.epoch, criando: false, ...(!state.me && meuMembro && items[meuMembro] ? { me: meuMembro } : {}) })

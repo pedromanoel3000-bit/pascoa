@@ -120,6 +120,8 @@ Variáveis do Render (todas opcionais):
 
 **Dados e exclusão:** em Família → Conta e segurança há “Baixar meus dados” e “Excluir minha conta”. Membros escolhem se o que cadastraram sai junto; o dono precisa antes passar a propriedade (“Tornar dono”) ou, se for a única conta, apagar a família inteira. A mesma conta de e-mail pode ser criada de novo depois, do zero.
 
+**Privacidade entre as pessoas da família (só em família protegida):** o servidor entrega a cada conta apenas o que é dela. O treino (programa, sessões, rascunho), as preferências do radar e do início e as notificações de cada pessoa, e as conversas privadas só chegam ao aparelho de quem pode vê-las; o dono de um desejo não vê quem o reservou (e a reserva é mantida quando ele edita o desejo). Ninguém consegue alterar o que é de outra pessoa, mesmo mudando o app. Cada conta fica ligada a um membro (o servidor faz isso sozinho no primeiro acesso) e os aparelhos apagam as cópias de dados de outras pessoas que tinham antes da proteção. Em família sem conta ninguém é identificado, então tudo continua visível a todos, como antes.
+
 Os códigos das famílias novas têm 12 caracteres (`ABCD-EFGH-JKLM`). Os antigos (8) continuam valendo.
 
 ## Fotos e anexos
