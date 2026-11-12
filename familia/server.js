@@ -6,6 +6,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import net from 'node:net'
+import dns from 'node:dns/promises'
+import { receitaDeHtml } from './src/refeicoes.js'
 import { createNotifier } from './notify.js'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -259,6 +262,58 @@ async function openFamily(req, res) {
   }
 }
 
+// ---------- importar receita por link ----------
+// O servidor busca a página e devolve só a receita (dados estruturados schema.org). Exige o código de uma
+// família que já existe, só aceita endereços públicos, limita tamanho, tempo e redirecionamentos.
+const ipPrivado = (ip) => {
+  if (net.isIPv6(ip)) {
+    const v = ip.toLowerCase()
+    if (v.startsWith('::ffff:')) return ipPrivado(v.slice(7))
+    return v === '::1' || v === '::' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe8') || v.startsWith('fe9') || v.startsWith('fea') || v.startsWith('feb')
+  }
+  const [a, b] = ip.split('.').map(Number)
+  return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224
+}
+
+async function buscarPagina(endereco, saltos = 0) {
+  const u = new URL(endereco)
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('endereco')
+  if (u.username || u.password || (u.port && !['80', '443'].includes(u.port))) throw new Error('endereco')
+  const ips = net.isIP(u.hostname) ? [{ address: u.hostname }] : await dns.lookup(u.hostname, { all: true })
+  if (!ips.length || ips.some((i) => ipPrivado(i.address))) throw new Error('endereco')
+  const r = await fetch(u, { redirect: 'manual', signal: AbortSignal.timeout(9000), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; receitas/1.0)', Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'pt-BR,pt;q=0.9' } })
+  if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
+    if (saltos >= 4) throw new Error('redirecionamentos')
+    return buscarPagina(new URL(r.headers.get('location'), u).href, saltos + 1)
+  }
+  if (!r.ok) throw new Error('status ' + r.status)
+  if (!/html|xml/i.test(r.headers.get('content-type') || '')) throw new Error('tipo')
+  const partes = []
+  let total = 0
+  for await (const c of r.body) {
+    total += c.length
+    if (total > 3_000_000) break
+    partes.push(c)
+  }
+  return Buffer.concat(partes).toString('utf8')
+}
+
+async function handleReceita(req, res) {
+  const ctx = await openFamily(req, res)
+  if (!ctx) return
+  if (!Object.values(ctx.fam.items).some((i) => i.type === 'member' && !i.deleted)) return json(res, 403, { error: 'family not found' })
+  let endereco = String(ctx.body.url || '').trim()
+  if (endereco && !/^https?:\/\//i.test(endereco)) endereco = 'https://' + endereco
+  let html
+  try {
+    html = await buscarPagina(endereco)
+  } catch (err) {
+    return json(res, 200, { ok: false, motivo: err.message === 'endereco' || err instanceof TypeError ? 'endereco' : 'site' })
+  }
+  const receita = receitaDeHtml(html)
+  json(res, 200, receita ? { ok: true, receita } : { ok: false, motivo: 'sem-receita' })
+}
+
 // Itens só do servidor (cadastros de notificação) não vão para os aparelhos.
 const PRIVATE_TYPES = new Set(['pushsub'])
 
@@ -358,6 +413,7 @@ http
     const url = req.url.split('?')[0]
     if (url === '/api/sync' && req.method === 'POST') return handleSync(req, res).catch(() => json(res, 500, { error: 'server error' }))
     if (url.startsWith('/api/push/')) return handlePush(req, res, url.slice(10)).catch(() => json(res, 500, { error: 'server error' }))
+    if (url === '/api/receita' && req.method === 'POST') return handleReceita(req, res).catch(() => json(res, 500, { error: 'server error' }))
     if (url === '/api/health') return handleHealth(res)
     if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res)
     json(res, 404, { error: 'not found' })

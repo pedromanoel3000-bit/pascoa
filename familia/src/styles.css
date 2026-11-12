@@ -724,3 +724,61 @@ input.tr-in { text-align: center; font-weight: 700; padding: 10px 4px; min-width
 .pers-opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
 .pers-opcoes .chip:disabled { opacity: .4; }
 button.quick-btn { font: inherit; font-size: .78rem; font-weight: 700; }
+
+/* ---------- refeições (cardápio, receitas, modo cozinha) ---------- */
+.meal-acoes { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+.meal-acoes::-webkit-scrollbar { display: none; }
+.meal-acoes .chip { flex: none; }
+.meal-hoje { margin-left: 8px; font-size: .7rem; font-weight: 700; color: var(--on-primary, #fff); background: var(--primary); border-radius: 999px; padding: 2px 8px; vertical-align: middle; text-transform: none; }
+.meal-slot { padding: 0; align-items: stretch; gap: 0; }
+.meal-slot-main { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; padding: 9px 10px; text-align: left; }
+.meal-slot-main small { width: 52px; color: var(--muted); flex: none; }
+.meal-slot-main span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meal-slot.filled .meal-slot-main span { color: var(--text); font-weight: 600; }
+.meal-slot.feito .meal-slot-main span { text-decoration: line-through; color: var(--muted); font-weight: 400; }
+.meal-slot-main i { font-style: normal; color: var(--pos); font-weight: 800; }
+.meal-ver { flex: none; padding: 0 10px; border-left: 1px solid var(--line); font-size: 1rem; }
+.meal-sug { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
+.meal-receita { text-align: left; padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); }
+.rec-lista { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 700px) { .rec-lista { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
+.rec-item { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.rec { display: flex; flex-direction: column; gap: 10px; }
+.rec p { margin: 0; }
+.rec-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.rec-meta .chip { padding: 4px 10px; font-size: .84rem; }
+.rec-nota { background: var(--bg); border-radius: 10px; padding: 8px 10px; font-size: .92rem; }
+.rec-titulo { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.rec-titulo h3 { flex: 1; margin: 0; }
+.rec-porcoes { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 999px; padding: 2px; }
+.rec-porcoes .icon-btn { width: 32px; height: 32px; background: var(--card); font-weight: 700; }
+.rec-porcoes b { min-width: 86px; text-align: center; font-size: .9rem; }
+.rec-ings { list-style: none; margin: 0; padding: 0; }
+.rec-ings li { border-bottom: 1px solid var(--line); }
+.rec-ings li:last-child { border-bottom: 0; }
+.rec-ings label { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
+.rec-ings label.ja { opacity: .55; }
+.rec-de { display: block; font-size: .76rem; }
+.rec-passos { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; line-height: 1.45; }
+.rec-fonte { text-decoration: underline; }
+.rec-planejar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; border-radius: 12px; background: var(--bg); }
+.rec-planejar .btn { grid-column: 1 / -1; }
+.rec-acoes { margin-top: 6px; }
+.rec-check { align-self: end; padding-bottom: 10px; }
+.cozinha { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; padding: calc(12px + env(safe-area-inset-top)) 18px calc(14px + env(safe-area-inset-bottom)); gap: 12px; }
+.cozinha-topo { display: flex; align-items: center; gap: 10px; }
+.cozinha-topo .grow { display: flex; flex-direction: column; }
+.cozinha-topo small { color: var(--muted); }
+.cozinha-topo .icon-btn { background: var(--card); font-size: 1.4rem; }
+.cozinha-barra { height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.cozinha-barra i { display: block; height: 100%; background: var(--primary); transition: width .25s; }
+.cozinha-relogios { display: flex; flex-wrap: wrap; gap: 6px; }
+.cozinha-relogio { padding: 8px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.cozinha-relogio.fim { background: color-mix(in srgb, var(--pos) 18%, var(--card)); border-color: var(--pos); animation: casa-pisca 1s ease-in-out infinite; }
+.cozinha-passo { flex: 1; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+.cozinha-passo p { margin: 0; font-size: 1.55rem; line-height: 1.4; font-weight: 600; }
+.cozinha-timer { align-self: flex-start; font-size: 1.05rem; padding: 12px 18px; }
+.cozinha-ings { margin: 0; padding-left: 22px; font-size: 1.2rem; line-height: 1.7; }
+.cozinha-base { display: flex; gap: 8px; }
+.cozinha-base .btn { flex: 1; padding: 14px 8px; font-size: 1rem; }
+.cozinha-base .btn:disabled { opacity: .35; }
