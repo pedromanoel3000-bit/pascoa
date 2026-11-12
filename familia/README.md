@@ -9,7 +9,7 @@ Funciona no navegador do celular e do computador, e pode ser instalado na tela i
 |---|---|
 | **Início personalizável** | Botão "Personalizar o Início" no fim da página: cada pessoa escolhe os atalhos rápidos (criar evento, tarefa, compras, gasto, nota, barra mágica, ou abrir qualquer tela; até 10, na ordem que quiser) e quais blocos aparecem e em que ordem. Vale para a pessoa em todos os aparelhos |
 | **Radar** | O app aponta sozinho o que merece atenção, do mais urgente ao menos: conta que vence hoje ou amanhã, compromissos no mesmo horário, chuva em programa ao ar livre, aniversário sem presente planejado, presente reservado para comprar, votação esperando voto, tarefa atrasada há uma semana ou mais, amanhã cheio ou cedo, dias sem treinar, lista de compras acumulando, itens que devem estar acabando (pelo ritmo em que voltam à lista), mês no vermelho, gasto acima do mês passado, resumo da semana no domingo, jantar sem plano, tarefas sem responsável ou concentradas, e a boa notícia quando a casa está em dia. Cartão no Início e tela Radar (menu Mais) com ações de um toque, "Amanhã" para adiar, × para dispensar, lista dos escondidos e chaves para ligar e desligar cada tipo. Às 19h30 o servidor manda no máximo um aviso por pessoa, sem repetir |
-| **Aparência** | Quatro visuais para escolher em Família → Aparência (Original, Claro, Noite e Festa). A escolha vale para o aparelho em que foi feita |
+| **Aparência** | Quatro visuais para escolher em Configurações → Aparência (Original, Claro, Noite e Festa). A escolha vale para o aparelho em que foi feita |
 | **Casa viva** | No Início, um desenho da casa muda conforme a vida real: uma janela por pessoa (acesa quando ela não tem tarefa pendente), roupa no varal e sacos de lixo quando essas tarefas estão pendentes, caixas no quintal para tarefas atrasadas, geladeira que esvazia conforme a lista de compras cresce, bolo e balões em aniversário, fumaça na chaminé quando há refeição planejada, bandeira do correio com mensagem nova, céu de acordo com a hora. Se alguém compartilha a localização, mostra chuva, nuvens e temperatura (Open-Meteo, posição arredondada) |
 | **Barra mágica** | Escreva ou fale do seu jeito (“dentista amanhã às 15h”, “comprar leite e pão”, “gastei 35,90 no mercado”) e o app cria o evento, a tarefa, a compra, o gasto ou o recado. Também busca em tudo. Abre pelo ✨, pela barra do Início ou com Ctrl/⌘ + K. Roda no aparelho, sem serviço externo |
 | **Mural** | Resumo do dia, contagens regressivas (eventos marcados e aniversários dos próximos 30 dias), recados, fotos e votações rápidas. No Início aparece resumido (os 3 recados mais recentes, com "Ver mais" e toque para abrir um recado inteiro); a tela Mural, no menu Mais, mostra tudo |
@@ -80,7 +80,7 @@ Sem `SUPABASE_URL` e `SUPABASE_KEY`, o servidor guarda os dados na pasta `data/`
 
 ## Notificações
 
-- Cada pessoa ativa em **Família → Notificações neste aparelho** (ou no aviso da página inicial) e escolhe o que quer receber.
+- Cada pessoa ativa em **Configurações → Notificações neste aparelho** (ou no aviso da página inicial) e escolhe o que quer receber.
 - **Android:** funciona no Chrome. **iPhone:** só com o app adicionado à tela de início (Safari → Compartilhar → Adicionar à Tela de Início), iOS 16.4 ou mais novo.
 - Quem está com o app aberto na tela não recebe aviso repetido no celular, mas o aviso fica no histórico (sino 🔔 no topo).
 - O histórico funciona mesmo para quem não ativou as notificações no celular. Mensagens seguidas da mesma conversa viram um item só.
@@ -101,10 +101,10 @@ Avisos de mensagens, tarefas e listas funcionam mesmo sem isso, porque acontecem
 
 ## Contas (e-mail e senha, Google) e famílias protegidas
 
-Sem nada configurado, o app funciona como sempre: quem tem o código da família entra. Com contas, a família pode ser **protegida**: só entra quem tem uma conta (e-mail e senha, ou Google) **e** o código, e o dono vê e remove quem tem acesso (Família → Conta e segurança).
+Sem nada configurado, o app funciona como sempre: quem tem o código da família entra. Com contas, a família pode ser **protegida**: só entra quem tem uma conta (e-mail e senha, ou Google) **e** o código, e o dono vê e remove quem tem acesso (Configurações → Conta e segurança).
 
 - **E-mail e senha** funcionam sem configurar nada. As senhas são guardadas com scrypt (nunca em texto) e o servidor limita as tentativas de entrada.
-- **Proteger uma família que já existe:** Família → Conta e segurança → Entrar ou criar conta → Proteger esta família. Depois disso, cada aparelho precisa entrar com uma conta (o código continua servindo de convite).
+- **Proteger uma família que já existe:** Configurações → Conta e segurança → Entrar ou criar conta → Proteger esta família. Depois disso, cada aparelho precisa entrar com uma conta (o código continua servindo de convite).
 - **Famílias novas criadas já conectado** nascem protegidas.
 
 Variáveis do Render (todas opcionais):
@@ -136,7 +136,7 @@ A cobrança só liga com `ASAAS_API_KEY`; sem ela tudo é liberado. Famílias se
 
 No Asaas: **Integrações → Webhooks**, cadastre `https://SEU-APP/api/billing/webhook`, o mesmo token e os eventos de cobrança (pagamento confirmado e recebido, estornado, e assinatura removida). Cada assinatura é criada com forma de pagamento "perguntar ao cliente": o Asaas manda a cobrança de cada período por e-mail e a pessoa paga por Pix, boleto ou cartão. Se um aviso se perder, o botão "Já paguei, atualizar" (Conta e segurança) confere os pagamentos direto no Asaas.
 
-**Dados e exclusão:** em Família → Conta e segurança há “Baixar meus dados” e “Excluir minha conta”. Membros escolhem se o que cadastraram sai junto; o dono precisa antes passar a propriedade (“Tornar dono”) ou, se for a única conta, apagar a família inteira. A mesma conta de e-mail pode ser criada de novo depois, do zero.
+**Dados e exclusão:** em Configurações → Conta e segurança há “Baixar meus dados” e “Excluir minha conta”. Membros escolhem se o que cadastraram sai junto; o dono precisa antes passar a propriedade (“Tornar dono”) ou, se for a única conta, apagar a família inteira. A mesma conta de e-mail pode ser criada de novo depois, do zero.
 
 **Privacidade entre as pessoas da família (só em família protegida):** o servidor entrega a cada conta apenas o que é dela. O treino (programa, sessões, rascunho), as preferências do radar e do início e as notificações de cada pessoa, e as conversas privadas só chegam ao aparelho de quem pode vê-las; o dono de um desejo não vê quem o reservou (e a reserva é mantida quando ele edita o desejo). Ninguém consegue alterar o que é de outra pessoa, mesmo mudando o app. Cada conta fica ligada a um membro (o servidor faz isso sozinho no primeiro acesso) e os aparelhos apagam as cópias de dados de outras pessoas que tinham antes da proteção. Em família sem conta ninguém é identificado, então tudo continua visível a todos, como antes.
 
@@ -156,4 +156,4 @@ As fotos (álbum, mural, chat) e os anexos das notas **não ficam mais dentro do
 - Se o servidor perder os dados, o primeiro aparelho que abrir o app reenvia tudo o que tem salvo.
 - Cada registro tem `id`, `type` e `updatedAt`. Em caso de conflito, vale a alteração mais recente.
 - Fotos são reduzidas antes de salvar (até 1280 px).
-- Em **Família → Baixar backup** você salva tudo num arquivo `.json`.
+- Em **Configurações → Baixar backup** você salva tudo num arquivo `.json`.

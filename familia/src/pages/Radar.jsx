@@ -151,6 +151,7 @@ export default function RadarPagina() {
   const r = useRadar()
   return (
     <div className="page">
+      <a href="#settings" className="voltar">‹ Configurações</a>
       <PageHeader title="Radar" />
       {r.achados.length === 0 && <Empty icon="📡" text="Nada pedindo atenção agora. O radar avisa quando notar alguma coisa." />}
       {r.achados.length > 0 && (

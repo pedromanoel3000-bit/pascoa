@@ -71,10 +71,10 @@ export function privacidadeHtml({ contato = '', atualizada = '12/11/2026' } = {}
 <p>Não compartilhamos seus dados com terceiros para outros fins, salvo obrigação legal.</p>
 
 <h2>5. Por quanto tempo guardamos</h2>
-<p>Enquanto sua conta e sua família existirem. Você mesmo pode excluir a sua conta no aplicativo (Família → Conta e segurança → Excluir minha conta): a conta é apagada na hora e você escolhe se o que cadastrou na família também sai. Quem é a única dona de uma família pode apagá-la inteira. Pedidos feitos por e-mail também são atendidos, exceto o que formos obrigados a manter por lei.</p>
+<p>Enquanto sua conta e sua família existirem. Você mesmo pode excluir a sua conta no aplicativo (Configurações → Conta e segurança → Excluir minha conta): a conta é apagada na hora e você escolhe se o que cadastrou na família também sai. Quem é a única dona de uma família pode apagá-la inteira. Pedidos feitos por e-mail também são atendidos, exceto o que formos obrigados a manter por lei.</p>
 
 <h2>6. Seus direitos</h2>
-<p>Você pode, a qualquer momento: confirmar que tratamos seus dados, acessá-los, corrigi-los, pedir a exclusão, pedir a portabilidade, saber com quem compartilhamos e revogar consentimentos. Dentro do app, Família → Conta e segurança → Baixar meus dados gera um arquivo com os dados ligados a você, e Família → Baixar backup gera um arquivo com os dados da família inteira. Para exercer qualquer direito, escreva para ${mail}.</p>
+<p>Você pode, a qualquer momento: confirmar que tratamos seus dados, acessá-los, corrigi-los, pedir a exclusão, pedir a portabilidade, saber com quem compartilhamos e revogar consentimentos. Dentro do app, Configurações → Conta e segurança → Baixar meus dados gera um arquivo com os dados ligados a você, e Configurações → Baixar backup gera um arquivo com os dados da família inteira. Para exercer qualquer direito, escreva para ${mail}.</p>
 
 <h2>7. Segurança</h2>
 <p>Usamos conexão criptografada (HTTPS), senhas protegidas por algoritmo próprio para isso, limite de tentativas de acesso e separação dos dados de cada família. Nenhum sistema é totalmente imune a falhas; em caso de incidente relevante, avisaremos os afetados.</p>
@@ -108,7 +108,7 @@ export function termosHtml({ contato = '', empresa = '', cnpj = '', atualizada =
 <li>Para usar o aplicativo é preciso ter uma conta (e-mail e senha, ou Google). Você é responsável por manter a senha em segredo e pelo que for feito com a sua conta.</li>
 <li>Cada pessoa deve ter a sua conta. As famílias são grupos de contas: quem cria a família é o <b>dono</b> e pode convidar pessoas pelo código, fechar os convites, passar a propriedade e remover contas.</li>
 <li>Quem entra numa família passa a ver o que a família compartilha (agenda, tarefas, listas, mural, fotos, orçamento, contatos e demais áreas comuns). Algumas informações são pessoais e só chegam a quem pertencem, como o treino e as notificações de cada pessoa e as conversas privadas.</li>
-<li>Você pode excluir a sua conta a qualquer momento, em Família → Conta e segurança.</li>
+<li>Você pode excluir a sua conta a qualquer momento, em Configurações → Conta e segurança.</li>
 </ul>
 
 <h2>3. Teste grátis e assinatura</h2>
@@ -124,7 +124,7 @@ export function termosHtml({ contato = '', empresa = '', cnpj = '', atualizada =
 
 <h2>5. Cancelamento e reembolso</h2>
 <ul>
-<li>Você pode cancelar a renovação quando quiser, em Família → Conta e segurança → Assinatura. O acesso continua até o fim do período já pago. Não há multa.</li>
+<li>Você pode cancelar a renovação quando quiser, em Configurações → Conta e segurança → Assinatura. O acesso continua até o fim do período já pago. Não há multa.</li>
 <li><b>Arrependimento:</b> em até 7 dias corridos depois da primeira cobrança paga, você pode pedir o reembolso integral escrevendo para ${mail}, conforme o art. 49 do Código de Defesa do Consumidor.</li>
 <li>Fora esse prazo, não há reembolso proporcional do período em curso, salvo falha do nosso serviço ou obrigação legal.</li>
 </ul>
@@ -139,7 +139,7 @@ export function termosHtml({ contato = '', empresa = '', cnpj = '', atualizada =
 <h2>7. Disponibilidade e seus dados</h2>
 <ul>
 <li>Trabalhamos para manter o aplicativo no ar, mas não garantimos funcionamento ininterrupto: pode haver manutenções, falhas e mudanças.</li>
-<li>Recomendamos baixar cópias periódicas. O arquivo de backup (Família → Baixar backup) guarda os dados da família e os nomes das fotos, <b>mas não os arquivos das fotos</b>.</li>
+<li>Recomendamos baixar cópias periódicas. O arquivo de backup (Configurações → Baixar backup) guarda os dados da família e os nomes das fotos, <b>mas não os arquivos das fotos</b>.</li>
 </ul>
 
 <h2>8. Saúde, alimentação e treino</h2>

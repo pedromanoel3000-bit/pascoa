@@ -7,7 +7,7 @@ const MOTIVOS = {
   session: 'Sua sessão terminou. Entre de novo para continuar.',
   legacy: 'Esta família agora exige conta. Entre com e-mail e senha ou Google. A primeira conta que entrar vira a dona; as outras entram depois, usando o mesmo código.',
   account_required: 'Para criar uma família é preciso ter uma conta. Entre ou crie a sua.',
-  closed: 'Os convites desta família estão fechados. Peça ao dono para abri-los em Família → Conta e segurança.',
+  closed: 'Os convites desta família estão fechados. Peça ao dono para abri-los em Configurações → Conta e segurança.',
   removed: 'O dono da família removeu o acesso desta conta. Fale com ele se foi engano.',
   noaccess: 'Esta conta não tem acesso a essa família. Entre com outra conta ou confira o código.',
 }

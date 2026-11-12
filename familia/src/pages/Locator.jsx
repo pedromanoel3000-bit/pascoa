@@ -52,6 +52,7 @@ export default function Locator() {
 
   return (
     <div className="page">
+      <a href="#settings" className="voltar">‹ Configurações</a>
       <PageHeader title="Localização">
         <button className="btn ghost" onClick={checkIn}>
           Fazer check-in

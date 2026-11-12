@@ -22,7 +22,7 @@ export const ATALHOS = {
   orcamento: ['#budget', 'budget', 'Orçamento', '#18794e', 'Abrir'],
   localizacao: ['#locator', 'locator', 'Localização', '#e5484d', 'Abrir'],
   notas: ['#notes', 'notes', 'Notas', '#ad7f00', 'Abrir'],
-  familia: ['#settings', 'settings', 'Família', '#6e6c80', 'Abrir'],
+  familia: ['#settings', 'settings', 'Configurações', '#6e6c80', 'Abrir'],
   avisos: ['#notifications', 'bell', 'Notificações', '#f76b15', 'Abrir'],
 }
 export const ATALHOS_PADRAO = ['evento', 'tarefa', 'compras', 'mensagem', 'gasto']

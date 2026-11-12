@@ -6,7 +6,7 @@ import { baixarMeusDados, excluirConta, gerenciar, infoFamilia, proteger, sair, 
 import Login from './Login.jsx'
 import { PainelAssinatura } from './Assinatura.jsx'
 
-// Família → Conta e segurança: quem está conectado e quem pode entrar na família.
+// Configurações → Conta e segurança: quem está conectado e quem pode entrar na família.
 export default function Conta() {
   const st = useStore()
   const auth = useAuth()

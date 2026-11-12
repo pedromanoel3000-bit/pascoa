@@ -1,4 +1,4 @@
-// Visual do app, escolhido por aparelho (Família → Aparência).
+// Visual do app, escolhido por aparelho (Configurações → Aparência).
 const CHAVE = 'nosso-lar-tema'
 export const TEMAS = [
   { id: 'padrao', nome: 'Original', desc: 'O visual de sempre', cores: ['#f5f4fb', '#5b4bdb', '#ffffff'], barra: null },

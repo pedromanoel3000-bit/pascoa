@@ -6,6 +6,7 @@ import { toast } from '../toast.jsx'
 import { aplicarTema, TEMAS, temaAtual } from '../tema.js'
 import PushSettings, { ServerWarning } from './PushSettings.jsx'
 import Conta from './Conta.jsx'
+import { Icon } from '../icons.jsx'
 
 export default function Settings() {
   const st = useStore()
@@ -46,8 +47,23 @@ export default function Settings() {
 
   return (
     <div className="page">
-      <PageHeader title="Família" />
+      <PageHeader title="Configurações" />
       <ServerWarning />
+
+      <div className="config-atalhos">
+        <a href="#radar" className="more-tile" style={{ '--t': '#8e4ec6' }}>
+          <span className="tile-ic">
+            <Icon name="spark" size={24} />
+          </span>
+          Radar
+        </a>
+        <a href="#locator" className="more-tile" style={{ '--t': '#e5484d' }}>
+          <span className="tile-ic">
+            <Icon name="locator" size={24} />
+          </span>
+          Localização
+        </a>
+      </div>
 
       <div className="card form">
         <Field label="Nome da família">

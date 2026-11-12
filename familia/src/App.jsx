@@ -40,16 +40,19 @@ export const PAGES = {
   mural: { label: 'Mural', ic: 'pin', tint: '#d6409f', C: Mural },
   meals: { label: 'Refeições', ic: 'meals', tint: '#f76b15', C: Meals },
   photos: { label: 'Fotos', ic: 'photos', tint: '#d6409f', C: Photos },
-  radar: { label: 'Radar', ic: 'spark', tint: '#8e4ec6', C: RadarPagina },
+  radar: { label: 'Radar', ic: 'spark', tint: '#8e4ec6', C: RadarPagina, dentro: 'settings' },
   wishes: { label: 'Desejos', ic: 'gift', tint: '#e5484d', C: Wishes },
   contacts: { label: 'Contatos', ic: 'contacts', tint: '#8e4ec6', C: Contacts },
   budget: { label: 'Orçamento', ic: 'budget', tint: '#18794e', C: Budget },
-  locator: { label: 'Localização', ic: 'locator', tint: '#e5484d', C: Locator },
+  locator: { label: 'Localização', ic: 'locator', tint: '#e5484d', C: Locator, dentro: 'settings' },
   notes: { label: 'Notas', ic: 'notes', tint: '#ad7f00', C: Notes },
-  settings: { label: 'Família', ic: 'settings', tint: '#6e6c80', C: Settings },
+  settings: { label: 'Configurações', ic: 'settings', tint: '#6e6c80', C: Settings },
 }
 const BOTTOM = ['home', 'calendar', 'lists', 'chat']
 const NOT_IN_MORE = ['notifications'] // fica no sino do topo
+// Telas com `dentro` não aparecem no menu: abrem a partir de outra tela (Radar e Localização, em Configurações).
+const noMenu = ([, p]) => !p.dentro
+const secaoDe = (k) => PAGES[k]?.dentro || k
 
 function useHashPage() {
   const get = () => {
@@ -86,7 +89,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', h)
   }, [])
 
-  // Cor escolhida pela família (Família → Cor do app).
+  // Cor escolhida pela família (Configurações → Cor do app).
   useEffect(() => {
     const c = brand || '#5b4bdb'
     document.documentElement.style.setProperty('--brand', c)
@@ -144,8 +147,8 @@ export default function App() {
         <div className="brand">
           <img src="/icon.svg" alt="" /> {famName}
         </div>
-        {Object.entries(PAGES).map(([k, p]) => (
-          <a key={k} href={'#' + k} className={'side-link' + (page === k ? ' on' : '')}>
+        {Object.entries(PAGES).filter(noMenu).map(([k, p]) => (
+          <a key={k} href={'#' + k} className={'side-link' + (secaoDe(page) === k ? ' on' : '')}>
             <Icon name={p.ic} size={20} /> {p.label}
             {k === 'chat' && unread > 0 && <b className="badge">{unread}</b>}
             {k === 'notifications' && notifCount > 0 && <b className="badge">{notifCount}</b>}
@@ -200,6 +203,7 @@ function More() {
     <div className="page">
       <div className="more-grid">
         {Object.entries(PAGES)
+          .filter(noMenu)
           .filter(([k]) => !BOTTOM.includes(k) && !NOT_IN_MORE.includes(k))
           .map(([k, p]) => (
             <a key={k} href={'#' + k} className="more-tile" style={{ '--t': p.tint }}>
@@ -295,7 +299,7 @@ function Welcome() {
       )}
       {mode === 'join' && (
         <form className="card form" onSubmit={join}>
-          <Field label="Código da família (está em Família → Convidar, no aparelho de quem criou)">
+          <Field label="Código da família (está em Configurações → Convidar, no aparelho de quem criou)">
             <input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="ABCD-1234" autoFocus style={{ textTransform: 'uppercase' }} />
           </Field>
           <button className="btn primary">Entrar</button>
@@ -351,7 +355,7 @@ function PickMe() {
       {notFound && (
         <div className="card">
           <p className="late">Não encontrei nenhuma família com o código {st.family}.</p>
-          <p className="muted small">Confira o código em Família → Convidar, no aparelho onde a família foi criada.</p>
+          <p className="muted small">Confira o código em Configurações → Convidar, no aparelho onde a família foi criada.</p>
         </div>
       )}
       {members.length > 0 && <p className="muted">Toque no seu nome:</p>}
