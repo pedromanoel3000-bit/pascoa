@@ -782,3 +782,4 @@ button.quick-btn { font: inherit; font-size: .78rem; font-weight: 700; }
 .cozinha-base { display: flex; gap: 8px; }
 .cozinha-base .btn { flex: 1; padding: 14px 8px; font-size: 1rem; }
 .cozinha-base .btn:disabled { opacity: .35; }
+.tr-ultima { margin: -4px 0 0; font-size: .88rem; }

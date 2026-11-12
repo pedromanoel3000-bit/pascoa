@@ -512,6 +512,8 @@ function Sessao({ programa, plano }) {
             info={info}
             barra={barra}
             meta={metaTexto(meta, e, info, series.length, barra)}
+            ultima={T.ultimaVez(sessoes, d.treino, e.id)}
+            letra={d.treino}
             kgPh={(i) => kgSugerido(series, i, meta)}
             repsPh={(i) => T.repsAlvo(meta, e, i)}
             onCampo={(i, campos) => mudarSerie(e, i, campos)}
@@ -583,7 +585,7 @@ function Sessao({ programa, plano }) {
   )
 }
 
-function Exercicio({ e, n, series, info, barra, meta, kgPh, repsPh, onCampo, onMarcar }) {
+function Exercicio({ e, n, series, info, barra, meta, ultima, letra, kgPh, repsPh, onCampo, onMarcar }) {
   const unidade = e.equip === 'barra' ? `${T.EQUIP.barra} (${T.fmtKg(barra)} kg)` : T.EQUIP[e.equip]
   const feitas = series.filter((s) => s.feito).length
   return (
@@ -603,6 +605,15 @@ function Exercicio({ e, n, series, info, barra, meta, kgPh, repsPh, onCampo, onM
       </header>
       {e.semFalha && <span className="tr-tag">Nunca até a falha</span>}
       <p className="tr-meta">{meta}</p>
+      <p className="tr-ultima">
+        {ultima ? (
+          <>
+            <span className="muted">Última vez ({T.dataBR(ultima.data).slice(0, 5)}{ultima.treino !== letra ? `, treino ${ultima.treino}` : ''}{ultima.diaLeve ? ', dia leve' : ''}):</span> <b>{ultima.texto}</b>
+          </>
+        ) : (
+          <span className="muted">Primeira vez neste exercício: ainda não há carga registrada.</span>
+        )}
+      </p>
       <details className="tr-dica">
         <summary>Como fazer</summary>
         <p>{e.dica}</p>

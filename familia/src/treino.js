@@ -212,6 +212,18 @@ export function anteriorDe(sessoes, letra, id, antesDe) {
   return null
 }
 
+// A última vez em que o exercício foi feito, para mostrar a carga usada: primeiro neste treino;
+// se nunca foi feito nele, em qualquer outro. Um dia normal tem preferência sobre um dia leve.
+export function ultimaVez(sessoes, letra, id) {
+  const ord = ordenar(sessoes)
+  const feito = (s) => s.exercicios?.find((x) => x.id === id && x.series?.length)
+  const s = ord.find((s) => s.treino === letra && !s.diaLeve && feito(s)) || ord.find((s) => s.treino === letra && feito(s)) || ord.find((s) => !s.diaLeve && feito(s)) || ord.find(feito)
+  if (!s) return null
+  const e = feito(s)
+  const kgs = e.series.map((x) => x.kg).filter((k) => k != null)
+  return { data: s.data, treino: s.treino, series: e.series, kg: kgs.length ? Math.max(...kgs) : null, texto: formatarSeries(e.series), diaLeve: !!s.diaLeve }
+}
+
 // Meta de hoje: a "próxima" da última vez deste treino. Sem histórico, sugere a carga
 // do mesmo exercício em outro treino, se houver.
 export function metaAtual(e, letra, sessoes, barra = BARRA_PADRAO, plano = PLANO_PADRAO) {
