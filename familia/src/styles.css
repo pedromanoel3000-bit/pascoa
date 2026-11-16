@@ -859,3 +859,12 @@ img.foto-carregando:not([src]) { visibility: visible; }
 /* várias pessoas responsáveis por uma tarefa */
 .avatars.resp { flex: none; align-items: center; }
 .resp-mais { display: grid; place-items: center; flex: none; border-radius: 50%; margin-left: -8px; background: var(--bg); box-shadow: 0 0 0 2px var(--card); color: var(--muted); font-size: .72rem; font-weight: 700; }
+
+/* perguntar o que apagar de algo que se repete */
+.apagar-texto { margin: 0 0 12px; }
+.apagar-opcoes { display: flex; flex-direction: column; gap: 10px; padding-bottom: 6px; }
+.apagar-op { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; padding: 14px 16px; text-align: left; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; cursor: pointer; }
+.apagar-op b { font-size: 1rem; }
+.apagar-op small { color: var(--muted); font-size: .85rem; line-height: 1.35; }
+.apagar-op:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--line)); }
+.apagar-op.perigo b { color: var(--danger); }

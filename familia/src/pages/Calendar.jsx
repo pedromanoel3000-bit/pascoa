@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { addDays, describeRepeat, eventsOn, finalizeRepeat, fmtDate, MONTHS, occursOn, pad, responsaveis, today, WEEKDAYS, ymd } from '../utils.js'
+import { addDays, describeRepeat, encerrarAntes, eventsOn, finalizeRepeat, fmtDate, MONTHS, nextOccurrence, occursOn, pad, pularDia, responsaveis, today, WEEKDAYS, ymd } from '../utils.js'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { Responsaveis, toggleTask } from './Tasks.jsx'
 import RepeatField from './Repeat.jsx'
-import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
+import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, PerguntaApagar, Segmented, useNewIntent } from '../ui.jsx'
 
 // ---------- concluir eventos ----------
 // Evento que se repete: conclui cada dia separado. Evento único (mesmo de vários dias): conclui de uma vez.
@@ -52,6 +52,11 @@ export default function Calendar() {
   const [view, setView] = useState('month')
   const [month, setMonth] = useState(() => today().slice(0, 7))
   const [editing, setEditing] = useState(null)
+  const [diaAberto, setDiaAberto] = useState(null) // em qual dia da repetição o evento foi aberto
+  const abrir = (item, dia) => {
+    setDiaAberto(dia || null)
+    setEditing(item)
+  }
   const [filter, setFilter] = useState([])
   const touch = useRef(null)
   useNewIntent(() => setEditing({ date: today() }))
@@ -139,14 +144,14 @@ export default function Calendar() {
             })}
           </div>
           <h3 className="section-title">{fmtDate(sel, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
-          <DayList {...dia(sel)} onOpen={setEditing} />
+          <DayList {...dia(sel)} onOpen={abrir} />
         </>
       ) : (
-        <Upcoming dia={dia} onOpen={setEditing} />
+        <Upcoming dia={dia} onOpen={abrir} />
       )}
 
-      <Fab onClick={() => setEditing({ date: sel })} label="Novo evento" />
-      {editing && <EventForm initial={editing} onClose={() => setEditing(null)} />}
+      <Fab onClick={() => abrir({ date: sel })} label="Novo evento" />
+      {editing && <EventForm initial={editing} dia={diaAberto} onClose={() => setEditing(null)} />}
     </div>
   )
 }
@@ -215,7 +220,7 @@ function EventoLinha({ e, day, atraso, onOpen }) {
           <Icon name="check" size={18} />
         </button>
       )}
-      <button type="button" className="grow ev-main" onClick={() => !e.birthday && onOpen(st.items[e.id])}>
+      <button type="button" className="grow ev-main" onClick={() => !e.birthday && onOpen(st.items[e.id], day)}>
         <span className="event-time">{e.allDay ? 'Dia todo' : `${e.start || ''}${e.end ? '–' + e.end : ''}`}</span>
         <span className="grow ev-text">
           <b>{e.title}</b>
@@ -280,8 +285,12 @@ function Upcoming({ dia, onOpen }) {
   ))
 }
 
-function EventForm({ initial, onClose }) {
+// Dia e mês curtos por extenso: "segunda, 16 de novembro".
+const diaPorExtenso = (d) => fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' })
+
+function EventForm({ initial, dia, onClose }) {
   const st = useStore()
+  const [perguntando, setPerguntando] = useState(false)
   const [ev, setEv] = useState({ title: '', allDay: false, start: '09:00', end: '10:00', repeat: 'none', members: [st.me], place: '', notes: '', ...initial })
   const set = (k) => (e) => setEv({ ...ev, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
   const submit = (e) => {
@@ -289,71 +298,120 @@ function EventForm({ initial, onClose }) {
     save('event', { ...ev, ...finalizeRepeat(ev.repeat, ev.rule, ev.date) })
     onClose()
   }
+  // O que está gravado (não o que está sendo editado no formulário) decide como apagar.
+  const salvo = st.items[ev.id] || ev
+  const desfazer = (antes) => ({ label: 'Desfazer', run: () => save('event', { ...antes, deleted: false }) })
   const del = () => {
+    if (repete(salvo)) return setPerguntando(true)
     if (confirm('Apagar este evento?')) {
       remove(ev.id)
       onClose()
     }
   }
+  // Evento que se repete: só o dia aberto, daqui para frente ou a série inteira.
+  const opcoesApagar = () => {
+    const antes = salvo
+    const oDia = dia && occursOn(salvo, dia) ? dia : nextOccurrence(salvo, today()) || salvo.date
+    const fim = encerrarAntes(salvo, oDia)
+    const opcoes = [
+      {
+        rotulo: 'Só este dia',
+        detalhe: `Apaga só ${diaPorExtenso(oDia)}. Os outros dias continuam.`,
+        run: () => {
+          update(salvo.id, pularDia(salvo, oDia))
+          toast(`“${salvo.title}” apagado só em ${curta(oDia)}`, desfazer(antes))
+        },
+      },
+    ]
+    if (fim)
+      opcoes.push({
+        rotulo: 'Este e os próximos',
+        detalhe: `Apaga a partir de ${diaPorExtenso(oDia)}. Os dias que já passaram continuam na agenda.`,
+        run: () => {
+          update(salvo.id, fim)
+          toast(`“${salvo.title}” não se repete mais a partir de ${curta(oDia)}`, desfazer(antes))
+        },
+      })
+    opcoes.push({
+      rotulo: 'Todos os dias',
+      detalhe: 'Apaga o evento inteiro, inclusive os dias que já passaram.',
+      perigo: true,
+      run: () => {
+        remove(salvo.id)
+        toast(`“${salvo.title}” apagado`, desfazer(antes))
+      },
+    })
+    return opcoes
+  }
   return (
-    <Modal title={ev.id ? 'Editar evento' : 'Novo evento'} onClose={onClose}>
-      <form className="form" onSubmit={submit}>
-        <Field label="Título">
-          <input value={ev.title} onChange={set('title')} required autoFocus placeholder="Consulta no dentista" />
-        </Field>
-        <div className="row2">
-          <Field label="Data">
-            <input type="date" value={ev.date} onChange={set('date')} required />
+    <>
+      <Modal title={ev.id ? 'Editar evento' : 'Novo evento'} onClose={onClose}>
+        <form className="form" onSubmit={submit}>
+          <Field label="Título">
+            <input value={ev.title} onChange={set('title')} required autoFocus placeholder="Consulta no dentista" />
           </Field>
-          <Field label="Até (opcional)">
-            <input type="date" value={ev.endDate || ''} min={ev.date} onChange={set('endDate')} />
-          </Field>
-        </div>
-        <label className="check">
-          <input type="checkbox" checked={ev.allDay} onChange={set('allDay')} /> Dia inteiro
-        </label>
-        {!ev.allDay && (
           <div className="row2">
-            <Field label="Início">
-              <input type="time" value={ev.start} onChange={set('start')} />
+            <Field label="Data">
+              <input type="date" value={ev.date} onChange={set('date')} required />
             </Field>
-            <Field label="Fim">
-              <input type="time" value={ev.end} onChange={set('end')} />
+            <Field label="Até (opcional)">
+              <input type="date" value={ev.endDate || ''} min={ev.date} onChange={set('endDate')} />
             </Field>
           </div>
-        )}
-        <RepeatField repeat={ev.repeat} rule={ev.rule} anchor={ev.date} onChange={(repeat, rule) => setEv({ ...ev, repeat, rule })} />
-        <label className="check">
-          <input type="checkbox" checked={!!ev.countdown} onChange={set('countdown')} /> ⏳ Mostrar contagem regressiva no início
-        </label>
-        <Field label={ev.allDay ? 'Lembrete (dia inteiro: às 8h do dia)' : 'Lembrete'}>
-          <select value={String(ev.remind ?? 30)} onChange={(e) => setEv({ ...ev, remind: e.target.value === 'none' ? 'none' : Number(e.target.value) })}>
-            {REMIND.map(([v, l]) => (
-              <option key={v} value={String(v)}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Local">
-          <input value={ev.place} onChange={set('place')} />
-        </Field>
-        <Field label="Quem participa">
-          <MemberPicker value={ev.members} onChange={(members) => setEv({ ...ev, members })} />
-        </Field>
-        <Field label="Observações">
-          <textarea value={ev.notes} onChange={set('notes')} rows={2} />
-        </Field>
-        <div className="row">
-          {ev.id && (
-            <button type="button" className="btn danger" onClick={del}>
-              Apagar
-            </button>
+          <label className="check">
+            <input type="checkbox" checked={ev.allDay} onChange={set('allDay')} /> Dia inteiro
+          </label>
+          {!ev.allDay && (
+            <div className="row2">
+              <Field label="Início">
+                <input type="time" value={ev.start} onChange={set('start')} />
+              </Field>
+              <Field label="Fim">
+                <input type="time" value={ev.end} onChange={set('end')} />
+              </Field>
+            </div>
           )}
-          <span className="grow" />
-          <button className="btn primary">Salvar</button>
-        </div>
-      </form>
-    </Modal>
+          <RepeatField repeat={ev.repeat} rule={ev.rule} anchor={ev.date} onChange={(repeat, rule) => setEv({ ...ev, repeat, rule })} />
+          <label className="check">
+            <input type="checkbox" checked={!!ev.countdown} onChange={set('countdown')} /> ⏳ Mostrar contagem regressiva no início
+          </label>
+          <Field label={ev.allDay ? 'Lembrete (dia inteiro: às 8h do dia)' : 'Lembrete'}>
+            <select value={String(ev.remind ?? 30)} onChange={(e) => setEv({ ...ev, remind: e.target.value === 'none' ? 'none' : Number(e.target.value) })}>
+              {REMIND.map(([v, l]) => (
+                <option key={v} value={String(v)}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Local">
+            <input value={ev.place} onChange={set('place')} />
+          </Field>
+          <Field label="Quem participa">
+            <MemberPicker value={ev.members} onChange={(members) => setEv({ ...ev, members })} />
+          </Field>
+          <Field label="Observações">
+            <textarea value={ev.notes} onChange={set('notes')} rows={2} />
+          </Field>
+          <div className="row">
+            {ev.id && (
+              <button type="button" className="btn danger" onClick={del}>
+                Apagar
+              </button>
+            )}
+            <span className="grow" />
+            <button className="btn primary">Salvar</button>
+          </div>
+        </form>
+      </Modal>
+      {perguntando && (
+        <PerguntaApagar
+          titulo="Apagar evento que se repete"
+          texto={`“${salvo.title}” · ${describeRepeat(salvo)}`}
+          opcoes={opcoesApagar()}
+          onClose={(feito) => (feito ? onClose() : setPerguntando(false))}
+        />
+      )}
+    </>
   )
 }

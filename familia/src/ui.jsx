@@ -41,6 +41,37 @@ export function Modal({ title, onClose, children, footer }) {
   )
 }
 
+/**
+ * Pergunta o que apagar de algo que se repete.
+ * `opcoes`: [{ rotulo, detalhe, run, perigo }]. Depois de escolher, chama onClose(true); ao cancelar, onClose().
+ */
+export function PerguntaApagar({ titulo = 'Apagar', texto, opcoes, onClose }) {
+  return (
+    <Modal title={titulo} onClose={() => onClose()}>
+      {texto && <p className="muted small apagar-texto">{texto}</p>}
+      <div className="apagar-opcoes">
+        {opcoes.map((o) => (
+          <button
+            key={o.rotulo}
+            type="button"
+            className={'apagar-op' + (o.perigo ? ' perigo' : '')}
+            onClick={() => {
+              o.run()
+              onClose(true)
+            }}
+          >
+            <b>{o.rotulo}</b>
+            {o.detalhe && <small>{o.detalhe}</small>}
+          </button>
+        ))}
+        <button type="button" className="btn ghost" onClick={() => onClose()}>
+          Cancelar
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
 export function Field({ label, children }) {
   return (
     <label className="field">

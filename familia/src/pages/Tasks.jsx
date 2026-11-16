@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
 import { comResponsaveis, describeRepeat, finalizeRepeat, fmtDate, nextTaskDue, responsaveis, today } from '../utils.js'
-import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useMembers, useNewIntent } from '../ui.jsx'
+import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, PerguntaApagar, Segmented, useMembers, useNewIntent } from '../ui.jsx'
 import { Swipe, toast, vibrate } from '../toast.jsx'
 import RepeatField from './Repeat.jsx'
 
@@ -23,10 +23,60 @@ export function toggleTask(task, me) {
   let nextDue
   if (!task.done && task.repeat && task.repeat !== 'none') {
     nextDue = nextTaskDue(task)
-    if (nextDue) save('task', { ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due: nextDue, ...comResponsaveis(proximosResponsaveis(task)) })
+    if (nextDue) save('task', novaVez(task, nextDue, proximosResponsaveis(task)))
   }
   update(task.id, task.done ? { done: false } : { done: true, doneBy: me, doneAt: Date.now(), repeat: 'none', rule: null, rotation: [] })
   return nextDue
+}
+
+const repete = (t) => !t.done && t.repeat && t.repeat !== 'none'
+const novaVez = (task, due, quem) => ({ ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due, ...comResponsaveis(quem) })
+
+// Apagar só esta vez de uma tarefa que se repete: a série continua na próxima data, com as mesmas pessoas.
+// As vezes já concluídas ficam guardadas como tarefas separadas e não mudam. Devolve a próxima vez criada (ou null).
+export function pularTarefa(task) {
+  const due = nextTaskDue(task)
+  const nova = due ? save('task', novaVez(task, due, responsaveis(task))) : null
+  remove(task.id)
+  return nova
+}
+
+/** Pergunta, para uma tarefa que se repete, se apaga só esta vez ou esta e as próximas. */
+function ApagarTarefa({ task, onClose }) {
+  const proxima = nextTaskDue(task)
+  const desfazer = (nova) => ({
+    label: 'Desfazer',
+    run: () => {
+      if (nova) remove(nova.id)
+      save('task', { ...task, deleted: false })
+    },
+  })
+  return (
+    <PerguntaApagar
+      titulo="Apagar tarefa que se repete"
+      texto={`“${task.title}” · ${describeRepeat(task)}`}
+      opcoes={[
+        {
+          rotulo: 'Só esta vez',
+          detalhe: proxima ? `A tarefa continua: a próxima vez fica para ${fmtDate(proxima).replace(/\.$/, '')}.` : 'Era a última vez da repetição, então nada mais fica marcado.',
+          run: () => {
+            const nova = pularTarefa(task)
+            toast(nova ? `Pulada esta vez. Próxima: ${fmtDate(nova.due)}` : 'Tarefa apagada', desfazer(nova))
+          },
+        },
+        {
+          rotulo: 'Esta e as próximas',
+          detalhe: 'Encerra a repetição. As vezes que já foram concluídas continuam no histórico.',
+          perigo: true,
+          run: () => {
+            remove(task.id)
+            toast('Tarefa apagada', desfazer(null))
+          },
+        },
+      ]}
+      onClose={onClose}
+    />
+  )
 }
 
 export default function Tasks() {
@@ -93,24 +143,29 @@ function TaskRow({ task, onOpen }) {
       toast(nextDue === null ? `“${task.title}” concluída 🎉 Era a última vez da repetição.` : `“${task.title}” concluída 🎉`)
     }
   }
+  const [perguntando, setPerguntando] = useState(false)
   const del = () => {
+    if (repete(task)) return setPerguntando(true)
     const before = task
     remove(task.id)
     toast('Tarefa apagada', { label: 'Desfazer', run: () => save('task', { ...before, deleted: false }) })
   }
   return (
-    <Swipe className="task-swipe" onRight={toggle} onLeft={del} rightLabel={task.done ? 'Reabrir' : 'Concluir'}>
-      <div className={'card task-row' + (task.done ? ' done' : '')}>
-        <input type="checkbox" checked={!!task.done} onChange={toggle} aria-label={task.title} />
-        <button className="grow task-main" onClick={onOpen}>
-          <b>{task.title}</b>
-          <span className={'small ' + (late ? 'late' : 'muted')}>
-            {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${describeRepeat(task)}`} {task.points > 1 && `⭐ ${task.points}`} {next && `🔄 depois: ${next.name}`}
-          </span>
-        </button>
-        <Responsaveis ids={responsaveis(task)} size={30} />
-      </div>
-    </Swipe>
+    <>
+      <Swipe className="task-swipe" onRight={toggle} onLeft={del} rightLabel={task.done ? 'Reabrir' : 'Concluir'}>
+        <div className={'card task-row' + (task.done ? ' done' : '')}>
+          <input type="checkbox" checked={!!task.done} onChange={toggle} aria-label={task.title} />
+          <button className="grow task-main" onClick={onOpen}>
+            <b>{task.title}</b>
+            <span className={'small ' + (late ? 'late' : 'muted')}>
+              {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${describeRepeat(task)}`} {task.points > 1 && `⭐ ${task.points}`} {next && `🔄 depois: ${next.name}`}
+            </span>
+          </button>
+          <Responsaveis ids={responsaveis(task)} size={30} />
+        </div>
+      </Swipe>
+      {perguntando && <ApagarTarefa task={task} onClose={() => setPerguntando(false)} />}
+    </>
   )
 }
 
@@ -136,6 +191,9 @@ export function Responsaveis({ ids, size = 24 }) {
 }
 
 function TaskForm({ initial, onClose }) {
+  const st = useStore()
+  const [perguntando, setPerguntando] = useState(false)
+  const salvo = (t) => st.items[t.id] || t
   const [t, setT] = useState(() => {
     const base = { title: '', due: '', repeat: 'none', points: 1, notes: '', ...initial }
     return { ...base, assignees: responsaveis(base) }
@@ -154,56 +212,60 @@ function TaskForm({ initial, onClose }) {
     onClose()
   }
   return (
-    <Modal title={t.id ? 'Editar tarefa' : 'Nova tarefa'} onClose={onClose}>
-      <form className="form" onSubmit={submit}>
-        <Field label="O que precisa ser feito">
-          <input value={t.title} onChange={set('title')} required autoFocus placeholder="Levar o lixo para fora" />
-        </Field>
-        <Field label={escala ? 'Responsável desta vez' : 'Responsáveis (toque em quantas pessoas quiser)'}>
-          <MemberPicker single={escala} value={escala ? t.assignees.slice(0, 1) : t.assignees} onChange={(assignees) => setT({ ...t, assignees })} />
-        </Field>
-        <div className="row2">
-          <Field label="Prazo">
-            <input type="date" value={t.due} onChange={set('due')} />
+    <>
+      <Modal title={t.id ? 'Editar tarefa' : 'Nova tarefa'} onClose={onClose}>
+        <form className="form" onSubmit={submit}>
+          <Field label="O que precisa ser feito">
+            <input value={t.title} onChange={set('title')} required autoFocus placeholder="Levar o lixo para fora" />
           </Field>
-          <Field label="Pontos">
-            <input type="number" min="1" max="100" value={t.points} onChange={set('points')} />
+          <Field label={escala ? 'Responsável desta vez' : 'Responsáveis (toque em quantas pessoas quiser)'}>
+            <MemberPicker single={escala} value={escala ? t.assignees.slice(0, 1) : t.assignees} onChange={(assignees) => setT({ ...t, assignees })} />
           </Field>
-        </div>
-        <RepeatField repeat={t.repeat} rule={t.rule} anchor={t.due || today()} onChange={(repeat, rule) => setT({ ...t, repeat, rule })} />
-        {rotating && (
-          <Field label="Escala: revezar entre (toque na ordem do revezamento)">
-            <MemberPicker
-              value={t.rotation || []}
-              onChange={(rotation) => {
-                const naVez = t.assignees.find((id) => rotation.includes(id))
-                setT({ ...t, rotation, assignees: rotation.length > 1 ? [naVez || rotation[0]] : t.assignees })
-              }}
-            />
-            {(t.rotation || []).length > 1 && <RotationPreview rotation={t.rotation} />}
-          </Field>
-        )}
-        <Field label="Observações">
-          <textarea value={t.notes} onChange={set('notes')} rows={2} />
-        </Field>
-        <div className="row">
-          {t.id && (
-            <button
-              type="button"
-              className="btn danger"
-              onClick={() => {
-                remove(t.id)
-                onClose()
-              }}
-            >
-              Apagar
-            </button>
+          <div className="row2">
+            <Field label="Prazo">
+              <input type="date" value={t.due} onChange={set('due')} />
+            </Field>
+            <Field label="Pontos">
+              <input type="number" min="1" max="100" value={t.points} onChange={set('points')} />
+            </Field>
+          </div>
+          <RepeatField repeat={t.repeat} rule={t.rule} anchor={t.due || today()} onChange={(repeat, rule) => setT({ ...t, repeat, rule })} />
+          {rotating && (
+            <Field label="Escala: revezar entre (toque na ordem do revezamento)">
+              <MemberPicker
+                value={t.rotation || []}
+                onChange={(rotation) => {
+                  const naVez = t.assignees.find((id) => rotation.includes(id))
+                  setT({ ...t, rotation, assignees: rotation.length > 1 ? [naVez || rotation[0]] : t.assignees })
+                }}
+              />
+              {(t.rotation || []).length > 1 && <RotationPreview rotation={t.rotation} />}
+            </Field>
           )}
-          <span className="grow" />
-          <button className="btn primary">Salvar</button>
-        </div>
-      </form>
-    </Modal>
+          <Field label="Observações">
+            <textarea value={t.notes} onChange={set('notes')} rows={2} />
+          </Field>
+          <div className="row">
+            {t.id && (
+              <button
+                type="button"
+                className="btn danger"
+                onClick={() => {
+                  if (repete(salvo(t))) return setPerguntando(true)
+                  remove(t.id)
+                  onClose()
+                }}
+              >
+                Apagar
+              </button>
+            )}
+            <span className="grow" />
+            <button className="btn primary">Salvar</button>
+          </div>
+        </form>
+      </Modal>
+      {perguntando && <ApagarTarefa task={salvo(t)} onClose={(feito) => (feito ? onClose() : setPerguntando(false))} />}
+    </>
   )
 }
 

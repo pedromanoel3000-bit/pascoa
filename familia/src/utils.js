@@ -205,7 +205,24 @@ export function occursOn(ev, day) {
   if (!ev.date || day < ev.date) return false
   const r = ruleOf(ev, ev.date)
   if (!r) return day <= (ev.endDate && ev.endDate > ev.date ? ev.endDate : ev.date)
-  return matches(r, day)
+  return matches(r, day) && !(ev.pulados || []).includes(day)
+}
+
+// ---------- apagar parte de uma repetição ----------
+// "Só este dia": o dia vai para a lista de pulados e o resto da série continua igual.
+export const pularDia = (item, dia) => ({ pulados: [...new Set([...(item.pulados || []), dia])].sort() })
+
+// "Este e os próximos": a série passa a terminar no dia anterior a `dia`, e o que já passou continua.
+// Devolve os campos a gravar, ou null quando não sobraria nenhum dia (aí é apagar tudo).
+export function encerrarAntes(item, dia, anchor = item.date || item.due) {
+  const ultimo = addDays(dia, -1)
+  const atual = ruleOf(item, anchor)
+  if (!atual || !anchor || ultimo < anchor) return null
+  const base = item.repeat === 'custom' ? { ...defaultRule(anchor), ...(item.rule || {}) } : defaultRule(anchor, item.repeat)
+  const until = atual.until && atual.until < ultimo ? atual.until : ultimo
+  const campos = { ...finalizeRepeat('custom', { ...base, end: 'until', until }, anchor), until: null }
+  const primeiro = nextOccurrence({ ...item, ...campos }, anchor, 800)
+  return primeiro && primeiro <= until ? campos : null
 }
 
 // Próximo prazo de uma tarefa repetida (ou null se a repetição acabou).
