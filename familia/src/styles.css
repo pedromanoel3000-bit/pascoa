@@ -868,3 +868,4 @@ img.foto-carregando:not([src]) { visibility: visible; }
 .apagar-op small { color: var(--muted); font-size: .85rem; line-height: 1.35; }
 .apagar-op:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--line)); }
 .apagar-op.perigo b { color: var(--danger); }
+.dia-aberto { margin: -4px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); color: var(--text); }

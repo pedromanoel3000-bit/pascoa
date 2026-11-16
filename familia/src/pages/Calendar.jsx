@@ -285,24 +285,91 @@ function Upcoming({ dia, onOpen }) {
   ))
 }
 
+// Campos que o formulário muda: se nenhum mudou, salvar não precisa perguntar nada.
+const mudou = (a, b) => {
+  const f = (x) => JSON.stringify([x.title, x.date, x.endDate || '', !!x.allDay, x.start, x.end, x.repeat, x.rule || null, !!x.countdown, x.remind ?? 30, x.place || '', x.members || [], x.notes || ''])
+  return f(a) !== f(b)
+}
+
 // Dia e mês curtos por extenso: "segunda, 16 de novembro".
 const diaPorExtenso = (d) => fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' })
 
 function EventForm({ initial, dia, onClose }) {
   const st = useStore()
-  const [perguntando, setPerguntando] = useState(false)
+  const [perguntando, setPerguntando] = useState(null) // 'apagar' | 'salvar'
   const [ev, setEv] = useState({ title: '', allDay: false, start: '09:00', end: '10:00', repeat: 'none', members: [st.me], place: '', notes: '', ...initial })
   const set = (k) => (e) => setEv({ ...ev, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
+  // O que está gravado (não o que está sendo editado no formulário) decide como salvar e apagar.
+  const salvo = st.items[ev.id] || ev
+  const serie = !!ev.id && repete(salvo)
+  // Dia da repetição em que o evento foi aberto (ou o próximo, se não veio de um dia).
+  const oDia = serie ? (dia && occursOn(salvo, dia) ? dia : nextOccurrence(salvo, today()) || salvo.date) : null
+  const salvarTudo = () => save('event', { ...ev, ...finalizeRepeat(ev.repeat, ev.rule, ev.date) })
   const submit = (e) => {
     e.preventDefault()
-    save('event', { ...ev, ...finalizeRepeat(ev.repeat, ev.rule, ev.date) })
+    if (serie && mudou(ev, salvo)) return setPerguntando('salvar')
+    salvarTudo()
     onClose()
   }
-  // O que está gravado (não o que está sendo editado no formulário) decide como apagar.
-  const salvo = st.items[ev.id] || ev
-  const desfazer = (antes) => ({ label: 'Desfazer', run: () => save('event', { ...antes, deleted: false }) })
+  const desfazer = (antes, nova) => ({
+    label: 'Desfazer',
+    run: () => {
+      if (nova) remove(nova.id)
+      save('event', { ...antes, deleted: false })
+    },
+  })
+  // Evento que se repete: a mudança vale só para o dia aberto, daqui para frente ou para a série inteira.
+  const opcoesSalvar = () => {
+    const antes = salvo
+    const moveu = ev.date !== salvo.date // mudou a data no formulário: o evento vai para essa data
+    const novaRepeticao = ev.repeat !== salvo.repeat || JSON.stringify(ev.rule || null) !== JSON.stringify(salvo.rule || null)
+    const fim = encerrarAntes(salvo, oDia)
+    const { id, createdAt, createdBy, updatedAt, pulados, concluidos, until, ...dados } = ev
+    const opcoes = []
+    if (!novaRepeticao)
+      opcoes.push({
+        rotulo: 'Só este dia',
+        detalhe: `A mudança vale só para ${diaPorExtenso(oDia)}. Os outros dias continuam como estavam.`,
+        run: () => {
+          const data = moveu ? ev.date : oDia
+          update(salvo.id, pularDia(salvo, oDia))
+          const nova = save('event', { ...dados, date: data, endDate: '', repeat: 'none', rule: null, concluidos: (salvo.concluidos || []).includes(oDia) ? [data] : [], origem: salvo.id })
+          toast(`“${nova.title}” mudou só em ${curta(data)}`, desfazer(antes, nova))
+        },
+      })
+    if (fim)
+      opcoes.push({
+        rotulo: 'Este e os próximos',
+        detalhe: `A mudança vale a partir de ${diaPorExtenso(oDia)}. Os dias que já passaram continuam como estavam.`,
+        run: () => {
+          const inicio = moveu ? ev.date : oDia
+          // "Depois de N vezes" continua terminando no mesmo dia, em vez de recomeçar a contagem.
+          const mesmaContagem = ev.rule?.end === 'count' && salvo.rule?.end === 'count' && Number(ev.rule.count) === Number(salvo.rule.count)
+          const rule = mesmaContagem ? { ...ev.rule, end: 'until', until: salvo.rule.until } : ev.rule
+          update(salvo.id, { ...fim, pulados: (salvo.pulados || []).filter((d) => d < oDia), concluidos: (salvo.concluidos || []).filter((d) => d < oDia) })
+          const nova = save('event', {
+            ...dados,
+            date: inicio,
+            ...finalizeRepeat(ev.repeat, rule, inicio),
+            pulados: (salvo.pulados || []).filter((d) => d >= oDia),
+            concluidos: (salvo.concluidos || []).filter((d) => d >= oDia),
+            origem: salvo.id,
+          })
+          toast(`“${nova.title}” mudou a partir de ${curta(inicio)}`, desfazer(antes, nova))
+        },
+      })
+    opcoes.push({
+      rotulo: 'Todos os dias',
+      detalhe: 'Muda a série inteira, inclusive os dias que já passaram.',
+      run: () => {
+        salvarTudo()
+        toast(`“${ev.title}” atualizado em todos os dias`, desfazer(antes))
+      },
+    })
+    return opcoes
+  }
   const del = () => {
-    if (repete(salvo)) return setPerguntando(true)
+    if (serie) return setPerguntando('apagar')
     if (confirm('Apagar este evento?')) {
       remove(ev.id)
       onClose()
@@ -311,7 +378,6 @@ function EventForm({ initial, dia, onClose }) {
   // Evento que se repete: só o dia aberto, daqui para frente ou a série inteira.
   const opcoesApagar = () => {
     const antes = salvo
-    const oDia = dia && occursOn(salvo, dia) ? dia : nextOccurrence(salvo, today()) || salvo.date
     const fim = encerrarAntes(salvo, oDia)
     const opcoes = [
       {
@@ -372,6 +438,7 @@ function EventForm({ initial, dia, onClose }) {
             </div>
           )}
           <RepeatField repeat={ev.repeat} rule={ev.rule} anchor={ev.date} onChange={(repeat, rule) => setEv({ ...ev, repeat, rule })} />
+          {serie && <p className="muted small dia-aberto">📅 Você abriu {diaPorExtenso(oDia)}. Ao salvar uma mudança, o app pergunta se ela vale só para esse dia, para os próximos ou para todos.</p>}
           <label className="check">
             <input type="checkbox" checked={!!ev.countdown} onChange={set('countdown')} /> ⏳ Mostrar contagem regressiva no início
           </label>
@@ -406,10 +473,10 @@ function EventForm({ initial, dia, onClose }) {
       </Modal>
       {perguntando && (
         <PerguntaApagar
-          titulo="Apagar evento que se repete"
+          titulo={perguntando === 'apagar' ? 'Apagar evento que se repete' : 'Salvar a mudança em quais dias?'}
           texto={`“${salvo.title}” · ${describeRepeat(salvo)}`}
-          opcoes={opcoesApagar()}
-          onClose={(feito) => (feito ? onClose() : setPerguntando(false))}
+          opcoes={perguntando === 'apagar' ? opcoesApagar() : opcoesSalvar()}
+          onClose={(feito) => (feito ? onClose() : setPerguntando(null))}
         />
       )}
     </>

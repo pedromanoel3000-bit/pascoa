@@ -129,7 +129,7 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
         notify(key, fam, to, 'chat', { title: family ? `${who} · Família` : who, body: it.text || '📷 Foto', url: '/#chat', tag: 'chat-' + it.conv }, { skipDevice: device })
       } else if (it.type === 'task' && !it.done && novosResponsaveis(prev, it, isNew, actor).length) {
         notify(key, fam, novosResponsaveis(prev, it, isNew, actor), 'tasks', { title: 'Nova tarefa para você', body: `${it.title}${it.due ? ' · até ' + fmtDay(it.due) : ''} — de ${who}`, url: '/#tasks', tag: 'task-' + it.id })
-      } else if (it.type === 'event' && isNew) {
+      } else if (it.type === 'event' && isNew && !it.origem) { // `origem`: parte de uma série que já existia (mudança em alguns dias), não é evento novo
         const to = others(it.members?.length ? it.members : everyone)
         const when = `${fmtDay(it.date)}${it.allDay || !it.start ? '' : ' às ' + it.start}`
         notify(key, fam, to, 'events', { title: `📅 ${who} marcou um evento`, body: `${it.title} · ${when}`, url: '/#calendar', tag: 'event-' + it.id })
