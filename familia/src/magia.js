@@ -1,6 +1,6 @@
 // Barra mágica: entende uma frase em português ("dentista amanhã às 15h", "comprar leite e pão",
 // "gastei 35,90 no mercado") e devolve o que criar. Funções puras, sem React e sem internet.
-import { addDays, pad, today, weekdayOf } from './utils.js'
+import { addDays, pad, responsaveis, today, weekdayOf } from './utils.js'
 
 const WD = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
 const MES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -277,7 +277,7 @@ export function buscar(st, consulta, paginas = {}) {
         if (contem(i.title, q) || contem(i.place, q)) out.push({ icone: '📅', titulo: i.title, sub: `Agenda · ${br(i.date)}${i.allDay || !i.start ? '' : ' às ' + i.start}`, ir: 'calendar', quando: i.updatedAt })
         break
       case 'task':
-        if (contem(i.title, q)) out.push({ icone: i.done ? '✅' : '⬜', titulo: i.title, sub: `Tarefa${i.due ? ' · ' + br(i.due) : ''}${i.assignee ? ' · ' + (nomes[i.assignee] || '') : ''}`, ir: 'tasks', quando: i.updatedAt })
+        if (contem(i.title, q)) out.push({ icone: i.done ? '✅' : '⬜', titulo: i.title, sub: `Tarefa${i.due ? ' · ' + br(i.due) : ''}${responsaveis(i).length ? ' · ' + responsaveis(i).map((id) => nomes[id] || '').filter(Boolean).join(', ') : ''}`, ir: 'tasks', quando: i.updatedAt })
         break
       case 'listItem':
         if (!i.archived && contem(i.title, q)) out.push({ icone: '🛒', titulo: i.title, sub: `Lista ${listas[i.listId] || ''}${i.done ? ' · já pego' : ''}`, ir: 'lists', quando: i.updatedAt })

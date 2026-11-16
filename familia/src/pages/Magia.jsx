@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { byId, list, remove, save, useStore } from '../store.js'
-import { describeRepeat, finalizeRepeat, fmtDate, money, today } from '../utils.js'
+import { comResponsaveis, describeRepeat, finalizeRepeat, fmtDate, money, today } from '../utils.js'
 import { buscar, interpretar, separarItens } from '../magia.js'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
@@ -72,7 +72,7 @@ export default function Magia({ paginas, textoInicial = '', onClose }) {
       resumo = `📅 ${lido.titulo} · ${fmtDate(date)}${lido.hora ? ' às ' + lido.hora : ''}`
     } else if (tipo === 'tarefa') {
       const due = lido.data || (lido.repeat !== 'none' ? today() : '')
-      const t = save('task', { title: lido.titulo, due, assignee: lido.responsavel || lido.pessoas[0] || null, points: 1, notes: '', ...rep(due || today()) })
+      const t = save('task', { title: lido.titulo, due, ...comResponsaveis([lido.responsavel, ...lido.pessoas]), points: 1, notes: '', ...rep(due || today()) })
       ids.push(t.id)
       resumo = `✅ ${lido.titulo}${due ? ' · ' + fmtDate(due) : ''}`
     } else if (tipo === 'compras') {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { byId, remove, save, update, useStore } from '../store.js'
-import { addDays, today } from '../utils.js'
+import { addDays, comResponsaveis, today } from '../utils.js'
 import { Empty, PageHeader, useMembers } from '../ui.jsx'
 import { toast, vibrate } from '../toast.jsx'
 import { radar, TIPOS } from '../radar.js'
@@ -72,7 +72,7 @@ function useRadar() {
       toast(`“${tarefa.title}” ficou para ${dm(acao.due)}`, { label: 'Desfazer', run: () => (update(acao.id, { due: tarefa.due }), gravar(antes)) })
     }
     if (acao.tipo === 'criarTarefa') {
-      const nova = save('task', { title: acao.titulo, due: acao.due, assignee: st.me, repeat: 'none', points: 1, notes: '' })
+      const nova = save('task', { title: acao.titulo, due: acao.due, ...comResponsaveis([st.me]), repeat: 'none', points: 1, notes: '' })
       dispensar(a, false)
       toast(`Tarefa criada para ${dm(acao.due)}`, { label: 'Desfazer', run: () => (remove(nova.id), gravar(antes)) })
     }

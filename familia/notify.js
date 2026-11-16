@@ -1,8 +1,14 @@
 // Notificações do Nosso Lar (Web Push): avisos quando algo acontece e lembretes de horário.
 import crypto from 'node:crypto'
 import webpush from 'web-push'
-import { addDays, occursOn } from './src/utils.js'
+import { addDays, occursOn, responsaveis } from './src/utils.js'
 import { radar } from './src/radar.js'
+
+// Quem passou a ser responsável pela tarefa agora (e não foi quem fez a mudança): recebe o aviso.
+const novosResponsaveis = (prev, it, isNew, actor) => {
+  const antes = isNew ? [] : responsaveis(prev)
+  return responsaveis(it).filter((id) => id !== actor && !antes.includes(id))
+}
 
 const ACTIVE_MS = 20_000 // aparelho com o app aberto agora não recebe aviso (ele já vê na tela)
 const LIST_BATCH_MS = 30_000 // junta vários itens de lista num aviso só
@@ -121,8 +127,8 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
         const family = it.conv === 'family'
         const to = family ? others(everyone) : others(String(it.conv).split('|'))
         notify(key, fam, to, 'chat', { title: family ? `${who} · Família` : who, body: it.text || '📷 Foto', url: '/#chat', tag: 'chat-' + it.conv }, { skipDevice: device })
-      } else if (it.type === 'task' && !it.done && it.assignee && it.assignee !== actor && (isNew || prev.assignee !== it.assignee)) {
-        notify(key, fam, [it.assignee], 'tasks', { title: 'Nova tarefa para você', body: `${it.title}${it.due ? ' · até ' + fmtDay(it.due) : ''} — de ${who}`, url: '/#tasks', tag: 'task-' + it.id })
+      } else if (it.type === 'task' && !it.done && novosResponsaveis(prev, it, isNew, actor).length) {
+        notify(key, fam, novosResponsaveis(prev, it, isNew, actor), 'tasks', { title: 'Nova tarefa para você', body: `${it.title}${it.due ? ' · até ' + fmtDay(it.due) : ''} — de ${who}`, url: '/#tasks', tag: 'task-' + it.id })
       } else if (it.type === 'event' && isNew) {
         const to = others(it.members?.length ? it.members : everyone)
         const when = `${fmtDay(it.date)}${it.allDay || !it.start ? '' : ' às ' + it.start}`
@@ -214,8 +220,8 @@ export function createNotifier({ families, loadFamily, putItem, getConfig, setCo
 
     if (due(local, today, TASKS_TIME)) {
       const byPerson = new Map()
-      for (const t of items.filter((i) => i.type === 'task' && !i.done && i.assignee && i.due && i.due <= today)) {
-        byPerson.set(t.assignee, [...(byPerson.get(t.assignee) || []), t.title])
+      for (const t of items.filter((i) => i.type === 'task' && !i.done && i.due && i.due <= today)) {
+        for (const p of responsaveis(t)) byPerson.set(p, [...(byPerson.get(p) || []), t.title])
       }
       for (const [person, titles] of byPerson) {
         once(`tasks:${person}:${today}`, () => notify(key, fam, [person], 'reminders', { title: `✅ ${titles.length} tarefa${titles.length > 1 ? 's' : ''} para hoje`, body: joinPt(titles), url: '/#tasks', tag: 'tasks-today' }))

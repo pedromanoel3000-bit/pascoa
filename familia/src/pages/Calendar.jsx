@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { addDays, describeRepeat, eventsOn, finalizeRepeat, fmtDate, MONTHS, occursOn, pad, today, WEEKDAYS, ymd } from '../utils.js'
+import { addDays, describeRepeat, eventsOn, finalizeRepeat, fmtDate, MONTHS, occursOn, pad, responsaveis, today, WEEKDAYS, ymd } from '../utils.js'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
-import { toggleTask } from './Tasks.jsx'
+import { Responsaveis, toggleTask } from './Tasks.jsx'
 import RepeatField from './Repeat.jsx'
 import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useNewIntent } from '../ui.jsx'
 
@@ -61,7 +61,7 @@ export default function Calendar() {
   if (filter.length) events = events.filter((e) => !e.members?.length || e.members.some((m) => filter.includes(m)))
   const dayEvents = (d) => eventsOn(events, people, d)
   // Tarefas com prazo também aparecem na agenda (com o mesmo filtro de pessoas).
-  const tarefas = list(st, 'task').filter((t) => t.due && (!filter.length || !t.assignee || filter.includes(t.assignee)))
+  const tarefas = list(st, 'task').filter((t) => t.due && (!filter.length || !responsaveis(t).length || responsaveis(t).some((id) => filter.includes(id))))
   const hoje = today()
   const atrasos = atrasadosAte(hoje, events, tarefas)
   const dia = (d) => ({ day: d, events: dayEvents(d), tasks: tarefas.filter((t) => t.due === d), atrasos: d === hoje ? atrasos : [] })
@@ -262,7 +262,7 @@ function TarefaLinha({ t, atrasada }) {
           {atrasada && <span className="late small">venceu em {curta(t.due)}</span>}
         </span>
       </a>
-      {t.assignee && <Avatar member={byId(st, t.assignee)} size={24} />}
+      <Responsaveis ids={responsaveis(t)} size={24} />
     </div>
   )
 }

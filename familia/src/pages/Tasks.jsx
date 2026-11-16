@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { describeRepeat, finalizeRepeat, fmtDate, nextTaskDue, today } from '../utils.js'
+import { comResponsaveis, describeRepeat, finalizeRepeat, fmtDate, nextTaskDue, responsaveis, today } from '../utils.js'
 import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, Segmented, useMembers, useNewIntent } from '../ui.jsx'
 import { Swipe, toast, vibrate } from '../toast.jsx'
 import RepeatField from './Repeat.jsx'
@@ -8,10 +8,14 @@ import RepeatField from './Repeat.jsx'
 // Na escala, a próxima vez vai para a pessoa seguinte da lista.
 export function nextAssignee(task) {
   const r = task.rotation || []
-  if (r.length < 2) return task.assignee
-  const i = r.indexOf(task.assignee)
+  const atual = responsaveis(task)[0] || null
+  if (r.length < 2) return atual
+  const i = r.indexOf(atual)
   return r[(i + 1) % r.length]
 }
+
+// Quem fica com a próxima vez de uma tarefa repetida: na escala, a pessoa seguinte; sem escala, os mesmos responsáveis.
+const proximosResponsaveis = (task) => ((task.rotation || []).length > 1 ? [nextAssignee(task)] : responsaveis(task))
 
 // Concluir (ou reabrir) uma tarefa. Se ela se repete, cria a próxima vez.
 // Devolve o novo prazo, ou null quando a repetição terminou.
@@ -19,7 +23,7 @@ export function toggleTask(task, me) {
   let nextDue
   if (!task.done && task.repeat && task.repeat !== 'none') {
     nextDue = nextTaskDue(task)
-    if (nextDue) save('task', { ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due: nextDue, assignee: nextAssignee(task) })
+    if (nextDue) save('task', { ...task, id: undefined, createdAt: undefined, createdBy: undefined, done: false, doneBy: null, doneAt: null, due: nextDue, ...comResponsaveis(proximosResponsaveis(task)) })
   }
   update(task.id, task.done ? { done: false } : { done: true, doneBy: me, doneAt: Date.now(), repeat: 'none', rule: null, rotation: [] })
   return nextDue
@@ -32,7 +36,7 @@ export default function Tasks() {
   const [editing, setEditing] = useState(null)
   useNewIntent(() => setEditing({}))
   let tasks = list(st, 'task')
-  if (filter === 'mine') tasks = tasks.filter((t) => t.assignee === st.me)
+  if (filter === 'mine') tasks = tasks.filter((t) => responsaveis(t).includes(st.me))
   const open = tasks.filter((t) => !t.done).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'))
   const done = tasks
     .filter((t) => t.done)
@@ -104,23 +108,49 @@ function TaskRow({ task, onOpen }) {
             {task.due && `📅 ${fmtDate(task.due)}`} {task.repeat && task.repeat !== 'none' && `🔁 ${describeRepeat(task)}`} {task.points > 1 && `⭐ ${task.points}`} {next && `🔄 depois: ${next.name}`}
           </span>
         </button>
-        {task.assignee && <Avatar member={byId(st, task.assignee)} size={30} />}
+        <Responsaveis ids={responsaveis(task)} size={30} />
       </div>
     </Swipe>
   )
 }
 
+/** Fotos dos responsáveis, uma sobre a outra (até 3; depois mostra +N). */
+export function Responsaveis({ ids, size = 24 }) {
+  const st = useStore()
+  const pessoas = ids.map((id) => byId(st, id)).filter(Boolean)
+  if (!pessoas.length) return null
+  const nomes = pessoas.map((m) => m.name).join(', ')
+  const extra = pessoas.length > 3 ? pessoas.length - 2 : 0
+  return (
+    <span className="avatars resp" title={nomes} aria-label={`Responsáveis: ${nomes}`}>
+      {pessoas.slice(0, extra ? 2 : 3).map((m) => (
+        <Avatar key={m.id} member={m} size={size} />
+      ))}
+      {extra > 0 && (
+        <span className="resp-mais" style={{ width: size, height: size }}>
+          +{extra}
+        </span>
+      )}
+    </span>
+  )
+}
+
 function TaskForm({ initial, onClose }) {
-  const [t, setT] = useState({ title: '', due: '', assignee: null, repeat: 'none', points: 1, notes: '', ...initial })
+  const [t, setT] = useState(() => {
+    const base = { title: '', due: '', repeat: 'none', points: 1, notes: '', ...initial }
+    return { ...base, assignees: responsaveis(base) }
+  })
   const set = (k) => (e) => setT({ ...t, [k]: e.target.value })
   const rotating = t.repeat !== 'none'
+  const escala = rotating && (t.rotation || []).length > 1
   const submit = (e) => {
     e.preventDefault()
     const rotation = rotating ? t.rotation || [] : []
-    const assignee = rotation.length > 1 && !rotation.includes(t.assignee) ? rotation[0] : t.assignee
+    // Com escala, cada vez é de uma pessoa só: a que está na vez (ou a primeira da escala).
+    const quem = rotation.length > 1 ? [t.assignees.find((id) => rotation.includes(id)) || rotation[0]] : t.assignees
     // Tarefa repetida precisa de um prazo para saber quando é a próxima vez.
     const due = t.repeat !== 'none' && !t.due ? today() : t.due
-    save('task', { ...t, rotation, assignee, due, ...finalizeRepeat(t.repeat, t.rule, due) })
+    save('task', { ...t, rotation, ...comResponsaveis(quem), due, ...finalizeRepeat(t.repeat, t.rule, due) })
     onClose()
   }
   return (
@@ -129,8 +159,8 @@ function TaskForm({ initial, onClose }) {
         <Field label="O que precisa ser feito">
           <input value={t.title} onChange={set('title')} required autoFocus placeholder="Levar o lixo para fora" />
         </Field>
-        <Field label="Responsável">
-          <MemberPicker single value={t.assignee ? [t.assignee] : []} onChange={(v) => setT({ ...t, assignee: v[0] || null })} />
+        <Field label={escala ? 'Responsável desta vez' : 'Responsáveis (toque em quantas pessoas quiser)'}>
+          <MemberPicker single={escala} value={escala ? t.assignees.slice(0, 1) : t.assignees} onChange={(assignees) => setT({ ...t, assignees })} />
         </Field>
         <div className="row2">
           <Field label="Prazo">
@@ -143,7 +173,13 @@ function TaskForm({ initial, onClose }) {
         <RepeatField repeat={t.repeat} rule={t.rule} anchor={t.due || today()} onChange={(repeat, rule) => setT({ ...t, repeat, rule })} />
         {rotating && (
           <Field label="Escala: revezar entre (toque na ordem do revezamento)">
-            <MemberPicker value={t.rotation || []} onChange={(rotation) => setT({ ...t, rotation, assignee: t.assignee && rotation.includes(t.assignee) ? t.assignee : rotation[0] || t.assignee })} />
+            <MemberPicker
+              value={t.rotation || []}
+              onChange={(rotation) => {
+                const naVez = t.assignees.find((id) => rotation.includes(id))
+                setT({ ...t, rotation, assignees: rotation.length > 1 ? [naVez || rotation[0]] : t.assignees })
+              }}
+            />
             {(t.rotation || []).length > 1 && <RotationPreview rotation={t.rotation} />}
           </Field>
         )}

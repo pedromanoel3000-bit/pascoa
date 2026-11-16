@@ -1,6 +1,6 @@
 // Radar: olha os dados da família e aponta o que merece atenção, do mais urgente ao menos.
 // Função pura, usada pelo app (cartão do Início) e pelo servidor (um aviso por dia).
-import { addDays, daysUntil, joinPt, money, nextBirthday, occursOn, weekdayOf, WEEKDAYS_LONG } from './utils.js'
+import { addDays, daysUntil, joinPt, money, nextBirthday, occursOn, responsaveis, weekdayOf, WEEKDAYS_LONG } from './utils.js'
 
 const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const AR_LIVRE = /\b(churrasco|praia|parque|piquenique|picnic|trilha|passeio|corrida|correr|caminhada|pedal|bike|bicicleta|futebol|jogo|piscina|clube|camping|acampamento|pescaria|feira|quintal|zoologico|sitio|chacara|fazenda|cachoeira|show|festival)\b/
@@ -149,9 +149,9 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
         id: `atrasada:${t.id}:${sem}`,
         icone: '🕰️',
         peso: 60 + Math.min(sem, 6) * 2,
-        para: t.assignee ? [t.assignee] : null,
+        para: responsaveis(t).length ? responsaveis(t) : null,
         titulo: `Atrasada há ${plural(sem, 'semana', 'semanas')}`,
-        texto: `“${t.title}” era para ${t.due.slice(8)}/${t.due.slice(5, 7)}${t.assignee && t.assignee !== eu ? ` (${nome(t.assignee)})` : ''}. Quer marcar uma nova data?`,
+        texto: `“${t.title}” era para ${t.due.slice(8)}/${t.due.slice(5, 7)}${responsaveis(t).length && !responsaveis(t).includes(eu) ? ` (${joinPt(responsaveis(t).map(nome))})` : ''}. Quer marcar uma nova data?`,
         acoes: [
           { tipo: 'reagendar', rotulo: 'Fica para hoje', id: t.id, due: hoje },
           { tipo: 'reagendar', rotulo: 'Fica para sábado', id: t.id, due: sabado },
@@ -232,9 +232,9 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
   }
 
   // 11. Conta com vencimento hoje ou amanhã.
-  for (const t of abertas.filter((t) => (t.due === hoje || t.due === amanha) && CONTA.test(fold(t.title)) && (!t.assignee || t.assignee === eu))) {
+  for (const t of abertas.filter((t) => (t.due === hoje || t.due === amanha) && CONTA.test(fold(t.title)) && (!responsaveis(t).length || responsaveis(t).includes(eu)))) {
     const eHoje = t.due === hoje
-    add({ id: `conta:${t.id}:${t.due}`, icone: '🧾', peso: eHoje ? 98 : 80, para: t.assignee ? [t.assignee] : null, titulo: eHoje ? 'Vence hoje' : 'Vence amanhã', texto: `“${t.title}” está marcada para ${eHoje ? 'hoje' : 'amanhã'}.`, acoes: [{ tipo: 'concluir', rotulo: 'Já paguei', id: t.id }, { tipo: 'ir', rotulo: 'Abrir', ir: '#tasks' }] })
+    add({ id: `conta:${t.id}:${t.due}`, icone: '🧾', peso: eHoje ? 98 : 80, para: responsaveis(t).length ? responsaveis(t) : null, titulo: eHoje ? 'Vence hoje' : 'Vence amanhã', texto: `“${t.title}” está marcada para ${eHoje ? 'hoje' : 'amanhã'}.`, acoes: [{ tipo: 'concluir', rotulo: 'Já paguei', id: t.id }, { tipo: 'ir', rotulo: 'Abrir', ir: '#tasks' }] })
   }
 
   // 12. Presente que quem está lendo reservou e o aniversário está chegando.
@@ -287,7 +287,7 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
   }
 
   // 15. Muitas tarefas sem responsável.
-  const semDono = abertas.filter((t) => !t.assignee)
+  const semDono = abertas.filter((t) => !responsaveis(t).length)
   if (todos.length > 1 && semDono.length >= 5) add({ id: `semdono:${semana(hoje)}`, icone: '🙋', peso: 28, titulo: `${semDono.length} tarefas sem responsável`, texto: `Tarefa sem dono costuma ficar para depois. Exemplos: ${joinPt(semDono.slice(0, 2).map((t) => `“${t.title}”`))}.`, acoes: [{ tipo: 'ir', rotulo: 'Dividir tarefas', ir: '#tasks' }] })
 
   // 16. Treino: quem vinha treinando e parou (só a própria pessoa vê).
@@ -307,7 +307,7 @@ export function radar({ itens = [], eu, hoje, agoraMin = 0, previsao = null, vis
   if (weekdayOf(hoje) === 0) {
     const porDia = [1, 2, 3, 4, 5, 6, 7].map((d) => ({ dia: addDays(hoje, d), n: doDia(addDays(hoje, d)).filter((e) => quemVai(e).includes(eu)).length }))
     const comp = porDia.reduce((t, x) => t + x.n, 0)
-    const tar = abertas.filter((t) => t.due && t.due > hoje && t.due <= addDays(hoje, 7) && (!t.assignee || t.assignee === eu)).length
+    const tar = abertas.filter((t) => t.due && t.due > hoje && t.due <= addDays(hoje, 7) && (!responsaveis(t).length || responsaveis(t).includes(eu))).length
     const pico = [...porDia].sort((a, b) => b.n - a.n)[0]
     if (comp + tar > 0) add({ id: `semana:${semana(hoje)}:${eu}`, icone: '🧭', peso: 36, para: [eu], titulo: 'Sua semana', texto: `${plural(comp, 'compromisso', 'compromissos')} e ${plural(tar, 'tarefa', 'tarefas')} nos próximos 7 dias.${pico.n >= 2 ? ` O dia mais cheio é ${WEEKDAYS_LONG[weekdayOf(pico.dia)]}, com ${pico.n}.` : ''}`, acoes: [{ tipo: 'ir', rotulo: 'Abrir a agenda', ir: '#calendar' }] })
   }

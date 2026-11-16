@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
+import { addDays, daysUntil, eventsOn, fmtDate, nextBirthday, nextOccurrence, parseYmd, responsaveis, timeAgo, today, WEEKDAYS, WEEKDAYS_LONG } from '../utils.js'
 import { Avatar, useMembers } from '../ui.jsx'
 import { Icon } from '../icons.jsx'
 import { toast, vibrate } from '../toast.jsx'
@@ -24,7 +24,7 @@ export default function Home() {
   const allEvents = list(st, 'event')
   const events = eventsOn(allEvents, people, day)
   const myTasks = list(st, 'task')
-    .filter((t) => !t.done && (!t.assignee || t.assignee === st.me))
+    .filter((t) => !t.done && (!responsaveis(t).length || responsaveis(t).includes(st.me)))
     .sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'))
   const meal = list(st, 'meal')
     .filter((m) => m.date === day)

@@ -61,6 +61,20 @@ const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate() // m de 1
 export const weekdayOf = (s) => wdNum(dayNum(s))
 export const WEEKDAYS_FULL = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
 
+// Responsáveis por uma tarefa (pode ser mais de uma pessoa).
+// `assignees` é o campo atual; `assignee` (uma pessoa só) vem das versões antigas e continua sendo gravado
+// com o primeiro responsável. Se um aparelho com a versão antiga trocou só o `assignee`, vale o que ele escolheu.
+export function responsaveis(t) {
+  const lista = Array.isArray(t?.assignees) ? [...new Set(t.assignees.filter(Boolean))] : []
+  if (t?.assignee && !lista.includes(t.assignee)) return [t.assignee]
+  return lista.length ? lista : t?.assignee ? [t.assignee] : []
+}
+/** Campos a gravar numa tarefa para estes responsáveis. */
+export const comResponsaveis = (ids) => {
+  const assignees = [...new Set((ids || []).filter(Boolean))]
+  return { assignees, assignee: assignees[0] || null }
+}
+
 export function joinPt(list) {
   return list.length <= 1 ? list.join('') : `${list.slice(0, -1).join(', ')} e ${list[list.length - 1]}`
 }
