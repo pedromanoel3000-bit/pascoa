@@ -1,7 +1,7 @@
 // Casa viva: transforma os dados da família no estado do desenho da casa.
 // Função pura (sem store nem navegador) para poder ser testada sozinha.
 
-import { responsaveis } from './utils.js'
+import { quemGanhaPontos, responsaveis } from './utils.js'
 
 const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
@@ -43,7 +43,7 @@ export function estadoDaCasa({ tarefas = [], itensCompra = 0, membros = [], pess
   const inicioDoDia = new Date(`${hoje}T00:00:00`).getTime()
   const janelas = membros.slice(0, 4).map((m) => {
     const pendentes = abertas.filter((t) => responsaveis(t).includes(m.id)).length
-    const feitasHoje = tarefas.filter((t) => t.done && t.doneBy === m.id && t.doneAt >= inicioDoDia).length
+    const feitasHoje = tarefas.filter((t) => t.done && quemGanhaPontos(t).includes(m.id) && t.doneAt >= inicioDoDia).length
     return { id: m.id, nome: m.name, emoji: m.emoji || m.name?.[0]?.toUpperCase() || '?', cor: m.color, pendentes, feitasHoje, acesa: pendentes === 0 }
   })
 

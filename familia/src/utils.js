@@ -69,6 +69,12 @@ export function responsaveis(t) {
   if (t?.assignee && !lista.includes(t.assignee)) return [t.assignee]
   return lista.length ? lista : t?.assignee ? [t.assignee] : []
 }
+/**
+ * Quem ganha os pontos de uma tarefa concluída: os responsáveis, cada um com os pontos inteiros,
+ * não importa quem marcou como feita. Tarefa sem responsável: quem concluiu.
+ */
+export const quemGanhaPontos = (t) => (responsaveis(t).length ? responsaveis(t) : t?.doneBy ? [t.doneBy] : [])
+
 /** Campos a gravar numa tarefa para estes responsáveis. */
 export const comResponsaveis = (ids) => {
   const assignees = [...new Set((ids || []).filter(Boolean))]

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
-import { comResponsaveis, describeRepeat, finalizeRepeat, fmtDate, nextTaskDue, responsaveis, today } from '../utils.js'
+import { comResponsaveis, describeRepeat, finalizeRepeat, fmtDate, joinPt, nextTaskDue, quemGanhaPontos, responsaveis, today } from '../utils.js'
 import { Avatar, Empty, Fab, Field, MemberPicker, Modal, PageHeader, PerguntaApagar, Segmented, useMembers, useNewIntent } from '../ui.jsx'
 import { Swipe, toast, vibrate } from '../toast.jsx'
 import RepeatField from './Repeat.jsx'
@@ -93,10 +93,11 @@ export default function Tasks() {
     .sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0))
     .slice(0, 20)
 
-  // Placar: tarefas concluídas por pessoa nos últimos 7 dias.
+  // Placar: pontos das tarefas concluídas nos últimos 7 dias. Os pontos são dos responsáveis, não de quem marcou.
   const week = Date.now() - 7 * 86400000
+  const feitas = list(st, 'task').filter((t) => t.done && t.doneAt > week)
   const score = members
-    .map((m) => ({ m, n: list(st, 'task').filter((t) => t.done && t.doneBy === m.id && t.doneAt > week).reduce((s, t) => s + (Number(t.points) || 1), 0) }))
+    .map((m) => ({ m, n: feitas.filter((t) => quemGanhaPontos(t).includes(m.id)).reduce((s, t) => s + (Number(t.points) || 1), 0) }))
     .sort((a, b) => b.n - a.n)
 
   return (
@@ -140,7 +141,10 @@ function TaskRow({ task, onOpen }) {
     const nextDue = toggleTask(task, st.me)
     if (!task.done) {
       vibrate()
-      toast(nextDue === null ? `“${task.title}” concluída 🎉 Era a última vez da repetição.` : `“${task.title}” concluída 🎉`)
+      // Quem marcou não é responsável: avisa para quem foram os pontos.
+      const donos = responsaveis(task)
+      const pontos = donos.length && !donos.includes(st.me) ? ` ⭐ ${Number(task.points) || 1} para ${joinPt(donos.map((id) => byId(st, id)?.name).filter(Boolean))}` : ''
+      toast(`“${task.title}” concluída 🎉${pontos}${nextDue === null ? ' Era a última vez da repetição.' : ''}`)
     }
   }
   const [perguntando, setPerguntando] = useState(false)
