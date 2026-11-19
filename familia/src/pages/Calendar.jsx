@@ -1,0 +1,484 @@
+import { useRef, useState } from 'react'
+import { byId, list, remove, save, update, useStore } from '../store.js'
+import { addDays, describeRepeat, encerrarAntes, eventsOn, finalizeRepeat, fmtDate, MONTHS, nextOccurrence, occursOn, pad, pularDia, responsaveis, today, WEEKDAYS, ymd } from '../utils.js'
+import { Icon } from '../icons.jsx'
+import { toast, vibrate } from '../toast.jsx'
+import { Responsaveis, toggleTask } from './Tasks.jsx'
+import RepeatField from './Repeat.jsx'
+import { Avatar, Fab, Field, MemberPicker, Modal, PageHeader, PerguntaApagar, Segmented, useNewIntent } from '../ui.jsx'
+
+// ---------- concluir eventos ----------
+// Evento que se repete: conclui cada dia separado. Evento único (mesmo de vários dias): conclui de uma vez.
+const repete = (e) => e.repeat && e.repeat !== 'none'
+const chave = (e, d) => (repete(e) ? d : e.date)
+const feito = (e, d) => (e.concluidos || []).includes(chave(e, d))
+
+function concluirEvento(e, dias) {
+  const antes = e.concluidos || []
+  update(e.id, { concluidos: [...new Set([...antes, ...dias.map((d) => chave(e, d))])].sort() })
+  vibrate()
+  toast(`“${e.title}” concluído ✓`, { label: 'Desfazer', run: () => update(e.id, { concluidos: antes }) })
+}
+function reabrirEvento(e, d) {
+  update(e.id, { concluidos: (e.concluidos || []).filter((x) => x !== chave(e, d)) })
+}
+
+const JANELA_REPETIDOS = 30 // dias para trás em que um evento repetido sem ✓ ainda conta como atrasado
+
+// Eventos que passaram sem ✓ e tarefas vencidas: aparecem no dia de hoje até serem concluídos.
+function atrasadosAte(hoje, events, tarefas) {
+  const lista = []
+  for (const e of events) {
+    if (!e.date || e.date >= hoje) continue
+    if (!repete(e)) {
+      const fim = e.endDate && e.endDate > e.date ? e.endDate : e.date
+      if (fim < hoje && !feito(e, e.date)) lista.push({ tipo: 'evento', e, dias: [e.date] })
+      continue
+    }
+    const dias = []
+    const de = e.date > addDays(hoje, -JANELA_REPETIDOS) ? e.date : addDays(hoje, -JANELA_REPETIDOS)
+    for (let d = de; d < hoje; d = addDays(d, 1)) if (occursOn(e, d) && !feito(e, d)) dias.push(d)
+    if (dias.length) lista.push({ tipo: 'evento', e, dias })
+  }
+  for (const t of tarefas) if (!t.done && t.due < hoje) lista.push({ tipo: 'tarefa', t, dias: [t.due] })
+  return lista.sort((a, b) => a.dias[0].localeCompare(b.dias[0]))
+}
+
+const REMIND = [['none', 'Sem lembrete'], [0, 'Na hora'], [10, '10 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [120, '2 horas antes'], [1440, '1 dia antes']]
+
+export default function Calendar() {
+  const st = useStore()
+  const [sel, setSel] = useState(today())
+  const [view, setView] = useState('month')
+  const [month, setMonth] = useState(() => today().slice(0, 7))
+  const [editing, setEditing] = useState(null)
+  const [diaAberto, setDiaAberto] = useState(null) // em qual dia da repetição o evento foi aberto
+  const abrir = (item, dia) => {
+    setDiaAberto(dia || null)
+    setEditing(item)
+  }
+  const [filter, setFilter] = useState([])
+  const touch = useRef(null)
+  useNewIntent(() => setEditing({ date: today() }))
+
+  const people = [...list(st, 'member'), ...list(st, 'contact')]
+  let events = list(st, 'event')
+  if (filter.length) events = events.filter((e) => !e.members?.length || e.members.some((m) => filter.includes(m)))
+  const dayEvents = (d) => eventsOn(events, people, d)
+  // Tarefas com prazo também aparecem na agenda (com o mesmo filtro de pessoas).
+  const tarefas = list(st, 'task').filter((t) => t.due && (!filter.length || !responsaveis(t).length || responsaveis(t).some((id) => filter.includes(id))))
+  const hoje = today()
+  const atrasos = atrasadosAte(hoje, events, tarefas)
+  const dia = (d) => ({ day: d, events: dayEvents(d), tasks: tarefas.filter((t) => t.due === d), atrasos: d === hoje ? atrasos : [] })
+
+  const [y, m] = month.split('-').map(Number)
+  const first = new Date(y, m - 1, 1)
+  const start = addDays(ymd(first), -first.getDay())
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i))
+  const shift = (n) => {
+    const d = new Date(y, m - 1 + n, 1)
+    setMonth(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`)
+  }
+  const goToday = () => {
+    setSel(today())
+    setMonth(today().slice(0, 7))
+  }
+
+  return (
+    <div className="page">
+      <PageHeader title="Agenda">
+        <Segmented options={[['month', 'Mês'], ['agenda', 'Próximos']]} value={view} onChange={setView} />
+      </PageHeader>
+      <MemberPicker value={filter} onChange={setFilter} />
+
+      {view === 'month' ? (
+        <>
+          <div className="cal-nav">
+            <button className="icon-btn" onClick={() => shift(-1)} aria-label="Mês anterior">
+              ‹
+            </button>
+            <h2>
+              {MONTHS[m - 1]} {y}
+            </h2>
+            <button className="icon-btn" onClick={() => shift(1)} aria-label="Próximo mês">
+              ›
+            </button>
+            <button className="btn ghost small" onClick={goToday}>
+              Hoje
+            </button>
+          </div>
+          <div
+            className="cal-grid"
+            onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
+            onTouchEnd={(e) => {
+              const dx = e.changedTouches[0].clientX - (touch.current ?? e.changedTouches[0].clientX)
+              if (Math.abs(dx) > 60) shift(dx < 0 ? 1 : -1)
+              touch.current = null
+            }}
+          >
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="cal-wd">
+                {w}
+              </div>
+            ))}
+            {cells.map((d) => {
+              const evs = dayEvents(d)
+              return (
+                <button
+                  key={d}
+                  className={'cal-cell' + (d.slice(0, 7) !== month ? ' out' : '') + (d === today() ? ' today' : '') + (d === sel ? ' sel' : '')}
+                  onClick={() => setSel(d)}
+                  onDoubleClick={() => setEditing({ date: d })}
+                >
+                  <span className="cal-num">{Number(d.slice(8))}</span>
+                  <span className="cal-dots">
+                    {evs.slice(0, 3).map((e) => (
+                      <i key={e.id} style={{ background: colorOf(st, e) }} title={e.title}>
+                        <span>{e.title}</span>
+                      </i>
+                    ))}
+                    {evs.length > 3 && <small>+{evs.length - 3}</small>}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <h3 className="section-title">{fmtDate(sel, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+          <DayList {...dia(sel)} onOpen={abrir} />
+        </>
+      ) : (
+        <Upcoming dia={dia} onOpen={abrir} />
+      )}
+
+      <Fab onClick={() => abrir({ date: sel })} label="Novo evento" />
+      {editing && <EventForm initial={editing} dia={diaAberto} onClose={() => setEditing(null)} />}
+    </div>
+  )
+}
+
+function colorOf(st, e) {
+  if (e.birthday) return '#ffb224'
+  return byId(st, e.members?.[0])?.color || '#8b8d98'
+}
+
+function DayList({ day, events, tasks = [], atrasos = [], onOpen }) {
+  const st = useStore()
+  const vazio = !events.length && !tasks.length && !atrasos.length
+  return (
+    <>
+      {atrasos.length > 0 && (
+        <section className="atrasados">
+          <div className="row">
+            <h3 className="grow">⚠️ Atrasados ({atrasos.length})</h3>
+            {atrasos.length > 1 && (
+              <button
+                className="btn ghost small"
+                onClick={() => {
+                  if (!confirm(`Concluir os ${atrasos.length} atrasados?`)) return
+                  atrasos.forEach((a) => (a.tipo === 'evento' ? update(a.e.id, { concluidos: [...new Set([...(a.e.concluidos || []), ...a.dias.map((d) => chave(a.e, d))])].sort() }) : toggleTask(a.t, st.me)))
+                  toast('Atrasados concluídos ✓')
+                }}
+              >
+                Concluir todos
+              </button>
+            )}
+          </div>
+          {atrasos.map((a) =>
+            a.tipo === 'evento' ? (
+              <EventoLinha key={'e' + a.e.id} e={a.e} day={a.dias[a.dias.length - 1]} atraso={a.dias} onOpen={onOpen} />
+            ) : (
+              <TarefaLinha key={'t' + a.t.id} t={a.t} atrasada />
+            )
+          )}
+        </section>
+      )}
+      {vazio && <p className="muted">Nenhum evento. Toque no + para adicionar.</p>}
+      {events.map((e) => (
+        <EventoLinha key={e.id} e={e} day={day} onOpen={onOpen} />
+      ))}
+      {tasks.map((t) => (
+        <TarefaLinha key={t.id} t={t} />
+      ))}
+    </>
+  )
+}
+
+const curta = (d) => d.split('-').reverse().slice(0, 2).join('/')
+
+function EventoLinha({ e, day, atraso, onOpen }) {
+  const st = useStore()
+  const ok = !e.birthday && feito(e, day)
+  return (
+    <div className={'card event-row' + (ok ? ' feito' : '') + (atraso ? ' atrasado' : '')} style={{ borderLeftColor: colorOf(st, e) }}>
+      {!e.birthday && (
+        <button
+          type="button"
+          className={'ev-check' + (ok ? ' on' : '')}
+          onClick={() => (ok ? reabrirEvento(e, day) : concluirEvento(e, atraso || [day]))}
+          aria-label={ok ? `Desmarcar “${e.title}”` : `Concluir “${e.title}”`}
+        >
+          <Icon name="check" size={18} />
+        </button>
+      )}
+      <button type="button" className="grow ev-main" onClick={() => !e.birthday && onOpen(st.items[e.id], day)}>
+        <span className="event-time">{e.allDay ? 'Dia todo' : `${e.start || ''}${e.end ? '–' + e.end : ''}`}</span>
+        <span className="grow ev-text">
+          <b>{e.title}</b>
+          {atraso && (
+            <span className="late small">
+              {atraso.length > 1 ? `${atraso.length} vezes sem concluir · última em ${curta(atraso[atraso.length - 1])}` : `desde ${curta(atraso[0])}`}
+            </span>
+          )}
+          {e.place && <span className="muted small">📍 {e.place}</span>}
+          {repete(e) && <span className="muted small">🔁 {describeRepeat(e)}</span>}
+        </span>
+      </button>
+      <span className="avatars">
+        {(e.members || []).map((id) => (
+          <Avatar key={id} member={byId(st, id)} size={24} />
+        ))}
+      </span>
+    </div>
+  )
+}
+
+function TarefaLinha({ t, atrasada }) {
+  const st = useStore()
+  return (
+    <div className={'card event-row tarefa' + (t.done ? ' feito' : '') + (atrasada ? ' atrasado' : '')}>
+      <button
+        type="button"
+        className={'ev-check' + (t.done ? ' on' : '')}
+        onClick={() => {
+          toggleTask(t, st.me)
+          if (!t.done) {
+            vibrate()
+            toast(`“${t.title}” concluída 🎉`)
+          }
+        }}
+        aria-label={t.done ? `Reabrir “${t.title}”` : `Concluir “${t.title}”`}
+      >
+        <Icon name="check" size={18} />
+      </button>
+      <a href="#tasks" className="grow ev-main">
+        <span className="event-time">Tarefa</span>
+        <span className="grow ev-text">
+          <b>{t.title}</b>
+          {atrasada && <span className="late small">venceu em {curta(t.due)}</span>}
+        </span>
+      </a>
+      <Responsaveis ids={responsaveis(t)} size={24} />
+    </div>
+  )
+}
+
+function Upcoming({ dia, onOpen }) {
+  const days = Array.from({ length: 60 }, (_, i) => addDays(today(), i))
+    .map((d) => dia(d))
+    .filter((x) => x.events.length || x.tasks.length || x.atrasos.length)
+  if (!days.length) return <p className="muted">Nada nos próximos 60 dias.</p>
+  return days.map((x) => (
+    <div key={x.day}>
+      <h3 className="section-title">{x.day === today() ? 'Hoje' : fmtDate(x.day, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+      <DayList {...x} onOpen={onOpen} />
+    </div>
+  ))
+}
+
+// Campos que o formulário muda: se nenhum mudou, salvar não precisa perguntar nada.
+const mudou = (a, b) => {
+  const f = (x) => JSON.stringify([x.title, x.date, x.endDate || '', !!x.allDay, x.start, x.end, x.repeat, x.rule || null, !!x.countdown, x.remind ?? 30, x.place || '', x.members || [], x.notes || ''])
+  return f(a) !== f(b)
+}
+
+// Dia e mês curtos por extenso: "segunda, 16 de novembro".
+const diaPorExtenso = (d) => fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' })
+
+function EventForm({ initial, dia, onClose }) {
+  const st = useStore()
+  const [perguntando, setPerguntando] = useState(null) // 'apagar' | 'salvar'
+  const [ev, setEv] = useState({ title: '', allDay: false, start: '09:00', end: '10:00', repeat: 'none', members: [st.me], place: '', notes: '', ...initial })
+  const set = (k) => (e) => setEv({ ...ev, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
+  // O que está gravado (não o que está sendo editado no formulário) decide como salvar e apagar.
+  const salvo = st.items[ev.id] || ev
+  const serie = !!ev.id && repete(salvo)
+  // Dia da repetição em que o evento foi aberto (ou o próximo, se não veio de um dia).
+  const oDia = serie ? (dia && occursOn(salvo, dia) ? dia : nextOccurrence(salvo, today()) || salvo.date) : null
+  const salvarTudo = () => save('event', { ...ev, ...finalizeRepeat(ev.repeat, ev.rule, ev.date) })
+  const submit = (e) => {
+    e.preventDefault()
+    if (serie && mudou(ev, salvo)) return setPerguntando('salvar')
+    salvarTudo()
+    onClose()
+  }
+  const desfazer = (antes, nova) => ({
+    label: 'Desfazer',
+    run: () => {
+      if (nova) remove(nova.id)
+      save('event', { ...antes, deleted: false })
+    },
+  })
+  // Evento que se repete: a mudança vale só para o dia aberto, daqui para frente ou para a série inteira.
+  const opcoesSalvar = () => {
+    const antes = salvo
+    const moveu = ev.date !== salvo.date // mudou a data no formulário: o evento vai para essa data
+    const novaRepeticao = ev.repeat !== salvo.repeat || JSON.stringify(ev.rule || null) !== JSON.stringify(salvo.rule || null)
+    const fim = encerrarAntes(salvo, oDia)
+    const { id, createdAt, createdBy, updatedAt, pulados, concluidos, until, ...dados } = ev
+    const opcoes = []
+    if (!novaRepeticao)
+      opcoes.push({
+        rotulo: 'Só este dia',
+        detalhe: `A mudança vale só para ${diaPorExtenso(oDia)}. Os outros dias continuam como estavam.`,
+        run: () => {
+          const data = moveu ? ev.date : oDia
+          update(salvo.id, pularDia(salvo, oDia))
+          const nova = save('event', { ...dados, date: data, endDate: '', repeat: 'none', rule: null, concluidos: (salvo.concluidos || []).includes(oDia) ? [data] : [], origem: salvo.id })
+          toast(`“${nova.title}” mudou só em ${curta(data)}`, desfazer(antes, nova))
+        },
+      })
+    if (fim)
+      opcoes.push({
+        rotulo: 'Este e os próximos',
+        detalhe: `A mudança vale a partir de ${diaPorExtenso(oDia)}. Os dias que já passaram continuam como estavam.`,
+        run: () => {
+          const inicio = moveu ? ev.date : oDia
+          // "Depois de N vezes" continua terminando no mesmo dia, em vez de recomeçar a contagem.
+          const mesmaContagem = ev.rule?.end === 'count' && salvo.rule?.end === 'count' && Number(ev.rule.count) === Number(salvo.rule.count)
+          const rule = mesmaContagem ? { ...ev.rule, end: 'until', until: salvo.rule.until } : ev.rule
+          update(salvo.id, { ...fim, pulados: (salvo.pulados || []).filter((d) => d < oDia), concluidos: (salvo.concluidos || []).filter((d) => d < oDia) })
+          const nova = save('event', {
+            ...dados,
+            date: inicio,
+            ...finalizeRepeat(ev.repeat, rule, inicio),
+            pulados: (salvo.pulados || []).filter((d) => d >= oDia),
+            concluidos: (salvo.concluidos || []).filter((d) => d >= oDia),
+            origem: salvo.id,
+          })
+          toast(`“${nova.title}” mudou a partir de ${curta(inicio)}`, desfazer(antes, nova))
+        },
+      })
+    opcoes.push({
+      rotulo: 'Todos os dias',
+      detalhe: 'Muda a série inteira, inclusive os dias que já passaram.',
+      run: () => {
+        salvarTudo()
+        toast(`“${ev.title}” atualizado em todos os dias`, desfazer(antes))
+      },
+    })
+    return opcoes
+  }
+  const del = () => {
+    if (serie) return setPerguntando('apagar')
+    if (confirm('Apagar este evento?')) {
+      remove(ev.id)
+      onClose()
+    }
+  }
+  // Evento que se repete: só o dia aberto, daqui para frente ou a série inteira.
+  const opcoesApagar = () => {
+    const antes = salvo
+    const fim = encerrarAntes(salvo, oDia)
+    const opcoes = [
+      {
+        rotulo: 'Só este dia',
+        detalhe: `Apaga só ${diaPorExtenso(oDia)}. Os outros dias continuam.`,
+        run: () => {
+          update(salvo.id, pularDia(salvo, oDia))
+          toast(`“${salvo.title}” apagado só em ${curta(oDia)}`, desfazer(antes))
+        },
+      },
+    ]
+    if (fim)
+      opcoes.push({
+        rotulo: 'Este e os próximos',
+        detalhe: `Apaga a partir de ${diaPorExtenso(oDia)}. Os dias que já passaram continuam na agenda.`,
+        run: () => {
+          update(salvo.id, fim)
+          toast(`“${salvo.title}” não se repete mais a partir de ${curta(oDia)}`, desfazer(antes))
+        },
+      })
+    opcoes.push({
+      rotulo: 'Todos os dias',
+      detalhe: 'Apaga o evento inteiro, inclusive os dias que já passaram.',
+      perigo: true,
+      run: () => {
+        remove(salvo.id)
+        toast(`“${salvo.title}” apagado`, desfazer(antes))
+      },
+    })
+    return opcoes
+  }
+  return (
+    <>
+      <Modal title={ev.id ? 'Editar evento' : 'Novo evento'} onClose={onClose}>
+        <form className="form" onSubmit={submit}>
+          <Field label="Título">
+            <input value={ev.title} onChange={set('title')} required autoFocus placeholder="Consulta no dentista" />
+          </Field>
+          <div className="row2">
+            <Field label="Data">
+              <input type="date" value={ev.date} onChange={set('date')} required />
+            </Field>
+            <Field label="Até (opcional)">
+              <input type="date" value={ev.endDate || ''} min={ev.date} onChange={set('endDate')} />
+            </Field>
+          </div>
+          <label className="check">
+            <input type="checkbox" checked={ev.allDay} onChange={set('allDay')} /> Dia inteiro
+          </label>
+          {!ev.allDay && (
+            <div className="row2">
+              <Field label="Início">
+                <input type="time" value={ev.start} onChange={set('start')} />
+              </Field>
+              <Field label="Fim">
+                <input type="time" value={ev.end} onChange={set('end')} />
+              </Field>
+            </div>
+          )}
+          <RepeatField repeat={ev.repeat} rule={ev.rule} anchor={ev.date} onChange={(repeat, rule) => setEv({ ...ev, repeat, rule })} />
+          {serie && <p className="muted small dia-aberto">📅 Você abriu {diaPorExtenso(oDia)}. Ao salvar uma mudança, o app pergunta se ela vale só para esse dia, para os próximos ou para todos.</p>}
+          <label className="check">
+            <input type="checkbox" checked={!!ev.countdown} onChange={set('countdown')} /> ⏳ Mostrar contagem regressiva no início
+          </label>
+          <Field label={ev.allDay ? 'Lembrete (dia inteiro: às 8h do dia)' : 'Lembrete'}>
+            <select value={String(ev.remind ?? 30)} onChange={(e) => setEv({ ...ev, remind: e.target.value === 'none' ? 'none' : Number(e.target.value) })}>
+              {REMIND.map(([v, l]) => (
+                <option key={v} value={String(v)}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Local">
+            <input value={ev.place} onChange={set('place')} />
+          </Field>
+          <Field label="Quem participa">
+            <MemberPicker value={ev.members} onChange={(members) => setEv({ ...ev, members })} />
+          </Field>
+          <Field label="Observações">
+            <textarea value={ev.notes} onChange={set('notes')} rows={2} />
+          </Field>
+          <div className="row">
+            {ev.id && (
+              <button type="button" className="btn danger" onClick={del}>
+                Apagar
+              </button>
+            )}
+            <span className="grow" />
+            <button className="btn primary">Salvar</button>
+          </div>
+        </form>
+      </Modal>
+      {perguntando && (
+        <PerguntaApagar
+          titulo={perguntando === 'apagar' ? 'Apagar evento que se repete' : 'Salvar a mudança em quais dias?'}
+          texto={`“${salvo.title}” · ${describeRepeat(salvo)}`}
+          opcoes={perguntando === 'apagar' ? opcoesApagar() : opcoesSalvar()}
+          onClose={(feito) => (feito ? onClose() : setPerguntando(null))}
+        />
+      )}
+    </>
+  )
+}

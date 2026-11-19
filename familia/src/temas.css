@@ -1,0 +1,93 @@
+/* Três visuais alternativos. Cada um redefine as variáveis e ajusta os componentes mais visíveis. */
+
+/* ---------- Claro: branco, limpo e discreto ---------- */
+html[data-tema='claro'] {
+  --bg: #ffffff; --card: #ffffff; --text: #111111; --muted: #77756f; --line: #e9e8e4;
+  --primary: #111111; --primary-soft: #f3f3f1; --on-primary: #ffffff;
+  --danger: #c9372c; --pos: #1f7a4d; --neg: #b4460f;
+  --radius: 10px; --shadow: none; color-scheme: light;
+}
+html[data-tema='claro'] body { font-family: 'Inter', system-ui, -apple-system, sans-serif; letter-spacing: -.005em; }
+html[data-tema='claro'] h1 { font-weight: 700; letter-spacing: -.03em; }
+html[data-tema='claro'] .card { border-color: var(--line); }
+html[data-tema='claro'] .dash-card { border-width: 0 0 1px; border-radius: 0; padding: 14px 2px; }
+html[data-tema='claro'] .hero { background: var(--primary-soft); color: var(--text); box-shadow: none; }
+html[data-tema='claro'] .week-day { background: transparent; }
+html[data-tema='claro'] .week-day.on { background: #111; color: #fff; }
+html[data-tema='claro'] .casa { box-shadow: none; border-radius: 14px; }
+html[data-tema='claro'] .magia-barra { background: var(--primary-soft); border: 0; box-shadow: none; }
+html[data-tema='claro'] .magia-barra::before { display: none; }
+html[data-tema='claro'] .quick-btn .tile-ic { background: var(--primary-soft); color: var(--text); box-shadow: none; }
+html[data-tema='claro'] .bottom-nav { border-top-color: var(--line); }
+html[data-tema='claro'] .bottom-nav a.on .nav-ic { background: transparent; }
+html[data-tema='claro'] .bottom-nav a.on { color: #111; }
+html[data-tema='claro'] .fab { box-shadow: 0 6px 18px rgb(0 0 0 / 18%); }
+html[data-tema='claro'] .toast { background: #111; color: #fff; }
+html[data-tema='claro'] .section-title { text-transform: uppercase; font-size: .72rem; letter-spacing: .08em; }
+
+/* ---------- Noite: escuro com dourado ---------- */
+html[data-tema='noite'] {
+  --bg: #0d0d12; --card: #17171f; --text: #f1eee6; --muted: #9a968c; --line: #2a2a35;
+  --primary: #d9b872; --primary-soft: #2a2519; --on-primary: #1a1408;
+  --danger: #ff7a70; --pos: #5fd39a; --neg: #ffa05c;
+  --radius: 18px; --shadow: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 12px 30px rgb(0 0 0 / 35%); color-scheme: dark;
+}
+html[data-tema='noite'] body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+html[data-tema='noite'] h1, html[data-tema='noite'] h2, html[data-tema='noite'] .dash-head h3, html[data-tema='noite'] .brand { font-family: 'Fraunces', Georgia, serif; font-weight: 500; letter-spacing: 0; }
+html[data-tema='noite'] h1 { font-size: 1.65rem; }
+html[data-tema='noite'] .card { border-color: #24242e; }
+html[data-tema='noite'] .hero { background: linear-gradient(140deg, #1c1a14, #17171f); border: 1px solid #3a3222; box-shadow: none; }
+html[data-tema='noite'] .week-day { background: rgb(255 255 255 / 5%); }
+html[data-tema='noite'] .week-day.on { background: var(--primary); color: var(--on-primary); }
+html[data-tema='noite'] .casa { border-color: #3a3222; box-shadow: 0 16px 40px rgb(0 0 0 / 45%); }
+html[data-tema='noite'] .casa-cena svg { filter: saturate(.82) brightness(.9); }
+html[data-tema='noite'] .casa-aviso.ok { background: #1d2a20; color: #8fe0ae; }
+html[data-tema='noite'] .magia-barra { background: var(--card); }
+html[data-tema='noite'] .quick-btn .tile-ic { background: var(--card); color: var(--primary); border: 1px solid #3a3222; box-shadow: none; }
+html[data-tema='noite'] .bottom-nav { background: rgb(13 13 18 / 88%); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top-color: #24242e; }
+html[data-tema='noite'] .toast { background: #f1eee6; color: #14130f; }
+html[data-tema='noite'] .toast button { color: #8a6a1f; }
+html[data-tema='noite'] .section-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.05rem; color: var(--text); }
+html[data-tema='noite'] .badge { color: #1a0605; }
+
+/* ---------- Festa: colorido e divertido ---------- */
+html[data-tema='festa'] {
+  --bg: #fff4d6; --card: #ffffff; --text: #25213b; --muted: #6b6485; --line: #25213b;
+  --primary: #ff5d8f; --primary-soft: #ffe1ea; --on-primary: #ffffff;
+  --danger: #e5384d; --pos: #12805c; --neg: #c2410c;
+  --radius: 20px; --shadow: 4px 4px 0 #25213b; color-scheme: light;
+}
+html[data-tema='festa'] body { font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif; background: #fff4d6 radial-gradient(circle at 12% 0, #ffd6e4 0 16%, transparent 17%), radial-gradient(circle at 96% 22%, #c9f2e7 0 12%, transparent 13%); background-attachment: fixed; }
+html[data-tema='festa'] .topbar { background: #fff4d6; }
+html[data-tema='festa'] h1 { font-weight: 800; }
+html[data-tema='festa'] .card { border: 2px solid var(--line); }
+html[data-tema='festa'] .dash .dash-card:nth-child(1) { background: #dff5ff; }
+html[data-tema='festa'] .dash .dash-card:nth-child(2) { background: #dcf7ea; }
+html[data-tema='festa'] .dash .dash-card:nth-child(3) { background: #ffe9d2; }
+html[data-tema='festa'] .hero { background: #7c5cff; border: 2px solid var(--line); box-shadow: var(--shadow); }
+html[data-tema='festa'] .week-day.on { color: #7c5cff; }
+html[data-tema='festa'] .casa { border: 2px solid var(--line); box-shadow: var(--shadow); }
+html[data-tema='festa'] .casa-aviso { border: 2px solid var(--line); background: #fff; }
+html[data-tema='festa'] .casa-aviso.ok { background: #c9f2e7; color: var(--text); }
+html[data-tema='festa'] .btn { border: 2px solid var(--line); border-radius: 14px; font-weight: 700; }
+html[data-tema='festa'] .btn.primary, html[data-tema='festa'] .fab { box-shadow: 3px 3px 0 var(--line); border: 2px solid var(--line); }
+html[data-tema='festa'] .btn:active, html[data-tema='festa'] .fab:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
+html[data-tema='festa'] .chip { border: 2px solid var(--line); }
+html[data-tema='festa'] .magia-barra { border: 2px solid var(--line); box-shadow: var(--shadow); background: #fff; }
+html[data-tema='festa'] .magia-barra::before { display: none; }
+html[data-tema='festa'] .quick-btn { color: var(--text); }
+html[data-tema='festa'] .quick-btn .tile-ic { border: 2px solid var(--line); box-shadow: 3px 3px 0 var(--line); background: var(--t); color: #fff; }
+html[data-tema='festa'] .bottom-nav { border-top: 2px solid var(--line); }
+html[data-tema='festa'] .bottom-nav a.on .nav-ic { background: #ffd43b; border: 2px solid var(--line); color: var(--text); }
+html[data-tema='festa'] .bottom-nav a.on { color: var(--text); }
+html[data-tema='festa'] input, html[data-tema='festa'] select, html[data-tema='festa'] textarea { background: #fff; border: 2px solid var(--line); border-radius: 12px; }
+html[data-tema='festa'] .toast { background: #25213b; color: #fff; }
+
+/* ---------- escolha do visual ---------- */
+.temas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tema-op { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; border: 2px solid var(--line); text-align: left; }
+.tema-op.on { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+.tema-amostra { display: flex; height: 44px; border-radius: 9px; overflow: hidden; border: 1px solid rgb(0 0 0 / 12%); }
+.tema-amostra i { flex: 1; }
+.tema-amostra i:nth-child(2) { flex: 0 0 26%; }
+.tema-op small { color: var(--muted); }

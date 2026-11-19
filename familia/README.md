@@ -1,0 +1,169 @@
+# Nosso Lar — organizador da família
+
+App para a família inteira organizar a rotina, inspirado nas funções do FamilyWall.
+Funciona no navegador do celular e do computador, e pode ser instalado na tela inicial como um app.
+
+## O que tem
+
+| Tela | O que faz |
+|---|---|
+| **Início personalizável** | Botão "Personalizar o Início" no fim da página: cada pessoa escolhe os atalhos rápidos (criar evento, tarefa, compras, gasto, nota, barra mágica, ou abrir qualquer tela; até 10, na ordem que quiser) e quais blocos aparecem e em que ordem. Vale para a pessoa em todos os aparelhos |
+| **Radar** | O app aponta sozinho o que merece atenção, do mais urgente ao menos: conta que vence hoje ou amanhã, compromissos no mesmo horário, chuva em programa ao ar livre, aniversário sem presente planejado, presente reservado para comprar, votação esperando voto, tarefa atrasada há uma semana ou mais, amanhã cheio ou cedo, dias sem treinar, lista de compras acumulando, itens que devem estar acabando (pelo ritmo em que voltam à lista), mês no vermelho, gasto acima do mês passado, resumo da semana no domingo, jantar sem plano, tarefas sem responsável ou concentradas, e a boa notícia quando a casa está em dia. Cartão no Início e tela Radar (menu Mais) com ações de um toque, "Amanhã" para adiar, × para dispensar, lista dos escondidos e chaves para ligar e desligar cada tipo. Às 19h30 o servidor manda no máximo um aviso por pessoa, sem repetir |
+| **Aparência** | Quatro visuais para escolher em Configurações → Aparência (Original, Claro, Noite e Festa). A escolha vale para o aparelho em que foi feita |
+| **Casa viva** | No Início, um desenho da casa muda conforme a vida real: uma janela por pessoa (acesa quando ela não tem tarefa pendente), roupa no varal e sacos de lixo quando essas tarefas estão pendentes, caixas no quintal para tarefas atrasadas, geladeira que esvazia conforme a lista de compras cresce, bolo e balões em aniversário, fumaça na chaminé quando há refeição planejada, bandeira do correio com mensagem nova, céu de acordo com a hora. Se alguém compartilha a localização, mostra chuva, nuvens e temperatura (Open-Meteo, posição arredondada) |
+| **Barra mágica** | Escreva ou fale do seu jeito (“dentista amanhã às 15h”, “comprar leite e pão”, “gastei 35,90 no mercado”) e o app cria o evento, a tarefa, a compra, o gasto ou o recado. Também busca em tudo. Abre pelo ✨, pela barra do Início ou com Ctrl/⌘ + K. Roda no aparelho, sem serviço externo |
+| **Mural** | Resumo do dia, contagens regressivas (eventos marcados e aniversários dos próximos 30 dias), recados, fotos e votações rápidas. No Início aparece resumido (os 3 recados mais recentes, com "Ver mais" e toque para abrir um recado inteiro); a tela Mural, no menu Mais, mostra tudo |
+| **Agenda** | Calendário compartilhado com cor por pessoa, repetição (inclusive personalizada: a cada N dias/semanas/meses/anos, dias da semana, “3ª quarta do mês”, até uma data ou N vezes), filtro por membro e aniversários automáticos |
+| **Listas** | Compras, afazeres, viagem… Itens marcados por quem fez; sugestões dos itens mais comprados enquanto digita |
+| **Tarefas** | Responsável, prazo, repetição (com as mesmas opções personalizadas da agenda), escala (revezamento entre pessoas) e placar de pontos da semana |
+| **Chat** | Grupo da família e conversas privadas, com fotos e aviso de mensagens não lidas |
+| **Refeições** | Cardápio da semana (café, almoço, lanche, jantar) com quem cozinha, porções, "já foi feita", repetir amanhã, copiar a semana anterior e "Sugerir a semana" (preenche o que falta com receitas da família, sem repetir, preferindo favoritas e as menos recentes, e receita rápida em dia cheio). Livro de receitas com tipo, tempo, porções, favoritas, busca por nome ou ingrediente e filtros; porções ajustáveis que recalculam as quantidades; modo cozinha (um passo por vez, tela acesa, cronômetro tirado do texto do passo); importação por link (dados estruturados do site, buscados pelo servidor) ou por texto colado; e lista de compras da semana que junta e soma os ingredientes |
+| **Fotos** | Álbuns compartilhados |
+| **Desejos** | Lista de desejos de cada pessoa; os outros marcam “vou dar este” sem o dono ver |
+| **Treino** | Programa de 8 semanas por pessoa, com plano à escolha (Hipertrofia A–D ou Recomposição · glúteo e abdômen, com meta semanal de cardio e “dia de pouca energia”), fila A → B → C → D, séries com carga, repetições e “sobraram quantas”, cronômetro de descanso, meta da próxima vez (dupla progressão), registro em texto para copiar e importar, histórico e plano |
+| **Contatos** | Médico, escola, serviços… com botão de ligar e de WhatsApp |
+| **Orçamento** | Gastos e entradas por mês, por categoria e por pessoa |
+| **Localização** | Cada um escolhe compartilhar onde está; mapa, rota e check-in |
+| **Notas** | Senha do Wi-Fi, documentos e anexos |
+| **Família** | Convite por código, membros (cor, avatar, aniversário), cor do app, notificações, backup e restauração |
+| **Notificações** | Histórico no sino do topo (últimos 150 por pessoa, agrupado por dia) e avisos no celular: mensagens, tarefas atribuídas, eventos novos, itens nas listas, recados, votações e lembretes |
+
+Os dados ficam salvos no aparelho (funciona sem internet) e sincronizam com o servidor a cada poucos segundos.
+Quem tiver o **código da família** entra nela, então trate o código como uma senha.
+
+## Rodar no seu computador
+
+Precisa do Node.js 18 ou mais novo.
+
+```bash
+cd familia
+npm install
+npm run serve
+```
+
+Abra http://localhost:3001. Para usar no celular na mesma rede Wi-Fi, abra `http://IP-DO-COMPUTADOR:3001`.
+
+Para mexer no código com recarga automática, rode `npm start` num terminal e `npm run dev` em outro (abre em http://localhost:5173).
+
+## Colocar na internet de graça (Render + Supabase)
+
+O **Render** deixa o app no ar e o **Supabase** guarda os dados. Os dois têm plano grátis.
+
+### 1. Supabase (banco de dados)
+
+1. Crie uma conta em https://supabase.com e clique em **New project** (escolha a região São Paulo e anote a senha).
+2. No menu da esquerda, abra **SQL Editor**, cole todo o conteúdo do arquivo `supabase.sql` e clique em **Run**.
+3. Copie duas informações, que vão para o Render:
+   - **Project URL** (fica em *Project Settings → Data API* ou no botão *Connect*), algo como `https://abcd1234.supabase.co`
+   - a **chave secreta** (em *Project Settings → API Keys*: a *secret key* `sb_secret_…`, ou a `service_role` na aba de chaves antigas)
+
+A chave secreta dá acesso total ao banco: coloque-a só no Render, nunca no código.
+
+### 2. Render (o app no ar)
+
+1. Em https://render.com clique em **New → Web Service** e escolha o repositório `pascoa`.
+2. Preencha:
+   - **Branch:** a branch onde está o app
+   - **Root Directory:** `familia`
+   - **Build Command:** `npm install --include=dev && npm run build`
+   - **Start Command:** `npm start`
+   - **Instance Type:** Free
+3. Em **Environment Variables**, adicione:
+   - `SUPABASE_URL` = o Project URL
+   - `SUPABASE_KEY` = a chave secreta (também aceita o nome `SUPABASE_SERVICE_ROLE_KEY`)
+4. Clique em **Deploy**. Quando terminar, o endereço `https://….onrender.com` é o app.
+5. Confira abrindo `https://….onrender.com/api/health`: deve aparecer `"storage":"supabase"` e `"db":"ok"`. Se aparecer `"missing"`, falta a variável indicada; a tela **Família** do app mostra o mesmo aviso.
+
+No plano grátis o Render "dorme" depois de 15 minutos sem uso; a primeira abertura depois disso demora cerca de um minuto. Os dados não se perdem, porque ficam no Supabase.
+
+Sem `SUPABASE_URL` e `SUPABASE_KEY`, o servidor guarda os dados na pasta `data/` (ou em `DATA_DIR`).
+
+## Notificações
+
+- Cada pessoa ativa em **Configurações → Notificações neste aparelho** (ou no aviso da página inicial) e escolhe o que quer receber.
+- **Android:** funciona no Chrome. **iPhone:** só com o app adicionado à tela de início (Safari → Compartilhar → Adicionar à Tela de Início), iOS 16.4 ou mais novo.
+- Quem está com o app aberto na tela não recebe aviso repetido no celular, mas o aviso fica no histórico (sino 🔔 no topo).
+- O histórico funciona mesmo para quem não ativou as notificações no celular. Mensagens seguidas da mesma conversa viram um item só.
+- As chaves das notificações são criadas sozinhas e guardadas no Supabase (ou em `data/`). Se preferir, defina `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY`.
+- Se a inscrição de um aparelho se perder, o app refaz sozinho quando o navegador deixa. No iPhone, às vezes é preciso um toque em **Reativar**, e o aviso explica isso.
+- Se o app pedir para reativar com frequência, abra **Família**: um aviso no topo diz se o servidor está sem banco de dados (ele esquece as chaves a cada reinício).
+
+### Lembretes no plano grátis do Render
+
+O Render grátis "dorme" depois de 15 minutos sem uso, e dormindo ele não envia lembretes de horário.
+Para mantê-lo acordado de graça:
+
+1. Crie uma conta em https://cron-job.org.
+2. Clique em **Create cronjob**, cole o endereço do app com `/api/health` no final (ex.: `https://seu-app.onrender.com/api/health`) e escolha **a cada 10 minutos**.
+3. Salve. Os 750 horas grátis do Render por mês cobrem o mês inteiro ligado.
+
+Avisos de mensagens, tarefas e listas funcionam mesmo sem isso, porque acontecem enquanto alguém está usando o app.
+
+## Contas (e-mail e senha, Google) e famílias protegidas
+
+Sem nada configurado, o app funciona como sempre: quem tem o código da família entra. Com contas, a família pode ser **protegida**: só entra quem tem uma conta (e-mail e senha, ou Google) **e** o código, e o dono vê e remove quem tem acesso (Configurações → Conta e segurança).
+
+- **E-mail e senha** funcionam sem configurar nada. As senhas são guardadas com scrypt (nunca em texto) e o servidor limita as tentativas de entrada.
+- **Proteger uma família que já existe:** Configurações → Conta e segurança → Entrar ou criar conta → Proteger esta família. Depois disso, cada aparelho precisa entrar com uma conta (o código continua servindo de convite).
+- **Famílias novas criadas já conectado** nascem protegidas.
+
+Variáveis do Render (todas opcionais):
+
+| Variável | Para quê |
+|---|---|
+| `GOOGLE_CLIENT_ID` | Liga o botão "Continuar com Google". Crie em console.cloud.google.com → APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web, e em "Origens JavaScript autorizadas" coloque o endereço do app. Copie o ID do cliente (termina em `.apps.googleusercontent.com`). Não precisa da chave secreta. |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Liga o envio de e-mails (confirmar o e-mail e "Esqueci a senha"), pelo serviço Resend. `EMAIL_FROM` é o remetente, de um domínio verificado lá, ex.: `Nosso Lar <oi@seudominio.com.br>`. Com isso ligado, contas novas só entram depois de confirmar o e-mail. |
+| `APP_URL` | O endereço do app, usado nos links dos e-mails. O Render já informa `RENDER_EXTERNAL_URL`, que serve se faltar. |
+| `REQUIRE_ACCOUNT` | **Ligado por padrão**: ninguém usa o app sem conta e não existe família aberta pelo código. Famílias antigas (abertas) passam a pedir login e a primeira conta que entra vira a dona. `0` volta ao modo antigo (só para desenvolvimento e testes). |
+| `CONTACT_EMAIL` | O e-mail de contato mostrado na Política de Privacidade (página `/privacidade`). Fica só no servidor, não no código. |
+| `COMPANY_NAME`, `COMPANY_CNPJ` | Razão social e CNPJ de quem opera o serviço, mostrados nos Termos de Uso (página `/termos`). Ficam só no servidor. |
+| `TERMOS_REVISADOS` | `1` depois que um advogado revisar os termos: some a faixa amarela de "versão para revisão". |
+| `PROXY_HOPS` | Quantos proxies existem entre o usuário e o servidor (padrão 1). Serve para o limite de tentativas por endereço. |
+
+## Assinatura (Asaas)
+
+Cada conta ganha **7 dias de teste grátis** (o teste é por conta: criar outra família não dá mais dias; muda com `TRIAL_DAYS`, só para contas novas). Depois: **R$ 9,90 por mês** ou **R$ 99,00 por ano**. Passou do período pago, a família fica **3 dias só em leitura** (vê tudo, não altera; o que a pessoa edita fica na fila do aparelho e sobe depois da renovação) e depois é **bloqueada**. Nada é apagado, e baixar os dados continua possível.
+
+A cobrança só liga com `ASAAS_API_KEY`; sem ela tudo é liberado. Famílias sem conta não são cobradas.
+
+| Variável | Para quê |
+|---|---|
+| `ASAAS_API_KEY` | Chave de API do Asaas. Chave de teste (`$aact_hmlg_…`) usa o ambiente de testes; de produção (`$aact_prod_…`), o real. |
+| `ASAAS_WEBHOOK_TOKEN` | Senha dos avisos de pagamento (32 a 255 caracteres, sem espaços). A mesma que você cadastra no Asaas. |
+| `TRIAL_DAYS` | Dias de teste grátis das contas novas (padrão 7). Quem já começou o teste mantém o prazo que tinha. |
+| `BILLING_FREE_EMAILS` | E-mails (separados por vírgula) cujas famílias nunca são cobradas (a sua, por exemplo). |
+| `ASAAS_URL` | Opcional: troca o endereço da API. |
+
+No Asaas: **Integrações → Webhooks**, cadastre `https://SEU-APP/api/billing/webhook`, o mesmo token e os eventos de cobrança (pagamento confirmado e recebido, estornado, e assinatura removida). Cada assinatura é criada com forma de pagamento "perguntar ao cliente": o Asaas manda a cobrança de cada período por e-mail e a pessoa paga por Pix, boleto ou cartão. Se um aviso se perder, o botão "Já paguei, atualizar" (Conta e segurança) confere os pagamentos direto no Asaas.
+
+**Dados e exclusão:** em Configurações → Conta e segurança há “Baixar meus dados” e “Excluir minha conta”. Membros escolhem se o que cadastraram sai junto; o dono precisa antes passar a propriedade (“Tornar dono”) ou, se for a única conta, apagar a família inteira. A mesma conta de e-mail pode ser criada de novo depois, do zero.
+
+**Privacidade entre as pessoas da família (só em família protegida):** o servidor entrega a cada conta apenas o que é dela. O treino (programa, sessões, rascunho), as preferências do radar e do início e as notificações de cada pessoa, e as conversas privadas só chegam ao aparelho de quem pode vê-las; o dono de um desejo não vê quem o reservou (e a reserva é mantida quando ele edita o desejo). Ninguém consegue alterar o que é de outra pessoa, mesmo mudando o app. Cada conta fica ligada a um membro (o servidor faz isso sozinho no primeiro acesso) e os aparelhos apagam as cópias de dados de outras pessoas que tinham antes da proteção. Em família sem conta ninguém é identificado, então tudo continua visível a todos, como antes.
+
+Os códigos das famílias novas têm 12 caracteres (`ABCD-EFGH-JKLM`). Os antigos (8) continuam valendo.
+
+## Fotos e anexos
+
+As fotos (álbum, mural, chat) e os anexos das notas **não ficam mais dentro dos dados da família**: vão para o armazenamento do servidor, e os dados guardam só o nome do arquivo (o resumo SHA-256 do conteúdo, então a mesma foto nunca é guardada duas vezes). Cada aparelho baixa só o que vai mostrar e guarda uma cópia no IndexedDB. Fotos tiradas sem internet ficam numa fila e sobem quando a conexão volta. As fotos antigas, que estavam dentro dos dados, são convertidas sozinhas em segundo plano na primeira abertura depois da atualização.
+
+- Cada foto é reduzida a no máximo 1280 px (1600 px nos anexos de nota) e ganha uma miniatura de 400 px; arquivos de até 4 MB.
+- Com Supabase, cada arquivo vira uma linha da tabela `families` (nome `__ph_<família>_<id>`, em base64): não exige nenhum SQL novo, mas ocupa o banco (limite grátis de 500 MB, uns mil e poucos arquivos). Para muitas famílias o caminho é o Supabase Storage.
+- O “Baixar backup” e o “Baixar meus dados” levam os nomes das fotos, **não os arquivos das fotos**.
+
+## Como os dados são guardados
+
+- No Supabase, cada registro é uma linha da tabela `items`; sem Supabase, cada família é um arquivo JSON em `data/`. Em ambos, a família é identificada por um hash do código, nunca pelo código em si.
+- Se o servidor perder os dados, o primeiro aparelho que abrir o app reenvia tudo o que tem salvo.
+- Cada registro tem `id`, `type` e `updatedAt`. Em caso de conflito, vale a alteração mais recente.
+- Fotos são reduzidas antes de salvar (até 1280 px).
+- Em **Configurações → Baixar backup** você salva tudo num arquivo `.json`.
+
+## Página de divulgação (landing page)
+
+Em `/comecar` (arquivo `landing.js`; imagens em `public/lp/`). É o endereço para colocar nos anúncios e na bio do Instagram: `https://SEU-SITE/comecar`.
+
+- Os botões levam a `/#cadastro`, que abre direto o formulário de **Criar conta**, e mantêm os parâmetros do anúncio (`?utm_source=...&utm_campaign=...&utm_content=...`) no endereço.
+- Preços, dias de teste e dias de leitura vêm do próprio servidor (os mesmos valores do app). `CONTACT_EMAIL`, `COMPANY_NAME` e `COMPANY_CNPJ` aparecem na página quando definidos.
+- `APP_URL` (no Render, `RENDER_EXTERNAL_URL` já serve) é usado no endereço canônico e na imagem de compartilhamento (`public/lp/og.jpg`), que precisam ser endereços completos para o Instagram e o WhatsApp mostrarem a prévia.
+- As telas mostradas são capturas reais do app com uma família de exemplo. Tudo o que a página afirma existe no app: ao mudar um recurso ou uma regra de cobrança, confira o texto de `landing.js`.
+- A página funciona sem JavaScript (só perde as animações) e traz dados estruturados (aplicativo e perguntas frequentes) para os buscadores.
