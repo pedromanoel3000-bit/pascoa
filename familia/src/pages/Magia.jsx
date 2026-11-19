@@ -79,7 +79,7 @@ export default function Magia({ paginas, textoInicial = '', onClose }) {
       let l = lista()
       if (!l) l = save('list', { title: 'Compras', icon: '🛒' })
       const antes = new Set(list(st, 'listItem').map((i) => i.id))
-      const novos = addItems(st, l.id, lido.itens.join(', '))
+      const novos = addItems(st, l.id, lido.itens)
       resumo = novos.length ? `🛒 ${novos.join(', ')} → ${l.title}` : '🛒 Já estava na lista'
       ids.push({ lista: l.id, titulos: novos, antes })
     } else if (tipo === 'gasto') {

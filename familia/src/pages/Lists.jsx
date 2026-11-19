@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { byId, list, remove, save, update, useStore } from '../store.js'
 import { Avatar, Empty, Field, Modal, PageHeader, useNewIntent } from '../ui.jsx'
 import { Swipe, toast, vibrate } from '../toast.jsx'
+import { separarLista } from '../utils.js'
 
 const ICONS = ['🛒', '🧹', '🎁', '🧳', '💊', '📚', '🔧', '🎉', '📝', '🐾']
 
@@ -9,11 +10,12 @@ const ICONS = ['🛒', '🧹', '🎁', '🧳', '💊', '📚', '🔧', '🎉', '
 export const activeItems = (st) => list(st, 'listItem').filter((i) => !i.archived)
 const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
-// Adiciona um ou vários itens (separados por vírgula ou linha), sem repetir o que já está pendente.
+// Adiciona um ou vários itens, sem repetir o que já está pendente. `text` pode ser uma lista de títulos
+// ou o texto digitado (separado por vírgula ou linha; vírgula de preço e parênteses não separam).
 export function addItems(st, listId, text) {
   const pending = new Set(activeItems(st).filter((i) => i.listId === listId && !i.done).map((i) => norm(i.title)))
   const added = []
-  for (const title of text.split(/[,\n]/).map((t) => t.trim()).filter(Boolean)) {
+  for (const title of (Array.isArray(text) ? text : separarLista(text)).map((t) => String(t).trim()).filter(Boolean)) {
     if (pending.has(norm(title))) continue
     pending.add(norm(title))
     save('listItem', { listId, title, done: false })
@@ -43,14 +45,14 @@ export function frequentItems(st, listId) {
 export function ItemSuggestions({ listId, text, onPick, max = 8, emptyLabel = 'Comprar de novo' }) {
   const st = useStore()
   const pending = new Set(activeItems(st).filter((i) => i.listId === listId && !i.done).map((i) => norm(i.title)))
-  const typed = norm(text.split(/[,\n]/).pop() || '')
+  const typed = norm(separarLista(text).pop() || '')
   let options = frequentItems(st, listId).filter((f) => !pending.has(f.key))
   if (typed) options = options.filter((f) => f.key.includes(typed) && f.key !== typed).sort((a, b) => b.key.startsWith(typed) - a.key.startsWith(typed))
   else if (text.trim()) options = []
   options = options.slice(0, max)
   if (!options.length) return null
   const pick = (title) => {
-    const parts = text.split(/,/)
+    const parts = separarLista(text)
     parts.pop()
     onPick(title, parts.map((p) => p.trim()).filter(Boolean).join(', '))
   }

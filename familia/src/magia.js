@@ -1,6 +1,6 @@
 // Barra mágica: entende uma frase em português ("dentista amanhã às 15h", "comprar leite e pão",
 // "gastei 35,90 no mercado") e devolve o que criar. Funções puras, sem React e sem internet.
-import { addDays, pad, responsaveis, today, weekdayOf } from './utils.js'
+import { addDays, pad, responsaveis, separarLista, today, weekdayOf } from './utils.js'
 
 const WD = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
 const MES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -53,8 +53,7 @@ export function categoriaDe(titulo) {
 }
 
 export const separarItens = (txt) =>
-  txt
-    .split(/\s*[,;\n]\s*|\s+e\s+/)
+  separarLista(txt, { comE: true })
     .map((t) => t.trim().replace(/^[-•]\s*/, ''))
     .filter(Boolean)
 

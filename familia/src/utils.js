@@ -81,6 +81,48 @@ export const comResponsaveis = (ids) => {
   return { assignees, assignee: assignees[0] || null }
 }
 
+/**
+ * Separa uma lista digitada em itens. Separam: linha, ponto e vírgula e vírgula
+ * (e " e ", com `comE`). Não separam: a vírgula de número ("2,98", "1,5 kg") e o que está entre
+ * parênteses ou colchetes ("frango (Carroba - 2,98/kg)"). Devolve as partes sem limpar,
+ * inclusive a última vazia quando o texto termina num separador (para saber o que está sendo digitado).
+ */
+export function separarLista(texto, { comE = false } = {}) {
+  const s = String(texto ?? '')
+  const partes = []
+  let atual = ''
+  let nivel = 0
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === '\n') {
+      partes.push(atual)
+      atual = ''
+      nivel = 0
+      continue
+    }
+    if ('([{'.includes(c)) nivel++
+    else if (')]}'.includes(c)) nivel = Math.max(0, nivel - 1)
+    if (nivel === 0) {
+      const numero = c === ',' && /\d/.test(s[i - 1] || '') && /\d/.test(s[i + 1] || '')
+      if (c === ';' || (c === ',' && !numero)) {
+        partes.push(atual)
+        atual = ''
+        continue
+      }
+      const e = comE && /\s/.test(c) ? /^\s+e\s+/.exec(s.slice(i)) : null
+      if (e) {
+        partes.push(atual)
+        atual = ''
+        i += e[0].length - 1
+        continue
+      }
+    }
+    atual += c
+  }
+  partes.push(atual)
+  return partes
+}
+
 export function joinPt(list) {
   return list.length <= 1 ? list.join('') : `${list.slice(0, -1).join(', ')} e ${list[list.length - 1]}`
 }

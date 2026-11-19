@@ -82,7 +82,7 @@ function useRadar() {
       toast(`“${tarefa.title}” concluída 🎉`)
     }
     if (acao.tipo === 'adicionarCompras') {
-      const novos = addItems(st, acao.listId, acao.titulos.join(', '))
+      const novos = addItems(st, acao.listId, acao.titulos)
       dispensar(a, false)
       toast(`${novos.length} ${novos.length === 1 ? 'item foi' : 'itens foram'} para a lista 🛒`, { label: 'Desfazer', run: () => (novos.forEach((i) => remove(i.id)), gravar(antes)) })
     }
