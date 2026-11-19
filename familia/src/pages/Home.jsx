@@ -13,7 +13,7 @@ import Personalizar, { idInicio } from './Personalizar.jsx'
 import { ATALHOS, EM_GRADE, lerInicio } from '../inicio.js'
 import { toggleTask } from './Tasks.jsx'
 import { SLOTS } from './Meals.jsx'
-import { activeItems, addItems, ItemSuggestions } from './Lists.jsx'
+import { activeItems, addItems, ItemSuggestions, porOrdem } from './Lists.jsx'
 
 export default function Home() {
   const st = useStore()
@@ -248,7 +248,7 @@ function ShoppingCard() {
   const [text, setText] = useState('')
   const lists = list(st, 'list').sort((a, b) => a.createdAt - b.createdAt)
   const shop = lists.find((l) => /compra/i.test(l.title)) || lists[0]
-  const items = shop ? activeItems(st).filter((i) => i.listId === shop.id && !i.done).sort((a, b) => a.createdAt - b.createdAt) : []
+  const items = shop ? activeItems(st).filter((i) => i.listId === shop.id && !i.done).sort(porOrdem) : []
   const add = (e) => {
     e.preventDefault()
     let target = shop

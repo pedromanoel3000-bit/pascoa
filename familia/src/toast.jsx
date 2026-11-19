@@ -47,7 +47,7 @@ export function Toaster() {
 }
 
 // Arrastar para o lado no celular: direita conclui, esquerda apaga.
-export function Swipe({ as: Tag = 'div', className = '', onRight, onLeft, rightLabel = 'Concluir', leftLabel = 'Apagar', children }) {
+export function Swipe({ as: Tag = 'div', className = '', onRight, onLeft, rightLabel = 'Concluir', leftLabel = 'Apagar', children, ...resto }) {
   const [dx, setDx] = useState(0)
   const s = useRef(null)
   const moved = useRef(false)
@@ -84,7 +84,7 @@ export function Swipe({ as: Tag = 'div', className = '', onRight, onLeft, rightL
   }
 
   return (
-    <Tag className={'swipe ' + className}>
+    <Tag className={'swipe ' + className} {...resto}>
       {dx !== 0 && (
         <div className={'swipe-bg ' + (dx > 0 ? 'right' : 'left') + (Math.abs(dx) > LIMIT ? ' ready' : '')}>
           <span>{dx > 0 ? rightLabel : leftLabel}</span>

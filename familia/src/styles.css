@@ -869,3 +869,12 @@ img.foto-carregando:not([src]) { visibility: visible; }
 .apagar-op:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--line)); }
 .apagar-op.perigo b { color: var(--danger); }
 .dia-aberto { margin: -4px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); color: var(--text); }
+
+/* reordenar itens da lista */
+.checklist.reordenando > li.swipe { transition: transform .18s ease; }
+.checklist > li.arrastando { position: relative; box-shadow: 0 10px 24px -8px rgb(0 0 0 / 30%); border-radius: 12px; }
+.checklist > li.arrastando .swipe-fg { background: color-mix(in srgb, var(--primary) 6%, var(--card)); }
+.checklist.reordenando { user-select: none; -webkit-user-select: none; }
+.alca { flex: none; display: grid; place-items: center; width: 28px; height: 36px; margin: -6px -4px -6px -6px; border: 0; background: none; color: var(--muted); cursor: grab; touch-action: none; border-radius: 8px; }
+.alca:active { cursor: grabbing; color: var(--primary); }
+.dica-ordem { margin: 6px 4px 0; }
